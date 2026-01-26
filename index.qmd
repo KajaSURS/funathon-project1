@@ -29,15 +29,15 @@ editor_options:
   <tbody>
     <tr>
       <td><span class="level-button level-beginner">Beginner</span></td>
-      <td>Doing the exercises, relying on clues and solutions if needed.</td>
+      <td>Doing the exercises of steps 1 to 3, relying on clues and solutions if needed.</td>
     </tr>
     <tr>
       <td><span class="level-button level-intermediate">Intermediate</span></td>
-      <td>Doing the exercises, without relying on clues and solutions.</td>
+      <td>Doing the exercises of steps 1 to 3, without relying on clues and solutions.</td>
     </tr>
     <tr>
       <td><span class="level-button level-expert">Expert</span></td>
-      <td>>Doing the exercises, without relying on clues and solutions, and completing steps 4 (logging) and 5 (deployment).</td>
+      <td>Doing the exercises of steps 1 to 3, without relying on clues and solutions, and completing steps 4 (logging) and 5 (deployment).</td>
     </tr>
   </tbody>
 </table>
