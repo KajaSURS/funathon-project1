@@ -22,18 +22,22 @@ editor_options:
 <table>
   <thead>
     <tr>
-      <th>Niveau technique</th>
+      <th>Technical level</th>
       <th>Enjeux</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td><span class="level-button level-intermediaire">Intermédiaire</span></td>
-      <td>Chercher à faire les exercices et ne regarder les aides que si nécessaire. <b>Ne pas se préoccuper de la fin du tutoriel (l'ouverture vers la mise en production)</b>.</td>
+      <td><span class="level-button level-beginner">Beginner</span></td>
+      <td>Doing the exercises, relying on clues and solutions if needed.</td>
+    </tr>
+    <tr>
+      <td><span class="level-button level-intermediate">Intermediate</span></td>
+      <td>Doing the exercises, without relying on clues and solutions.</td>
     </tr>
     <tr>
       <td><span class="level-button level-expert">Expert</span></td>
-      <td>Faire les premiers exercices en autonomie. <b>Ajouter des éléments supplémentaires à l'application et aller jusqu'à la partie mise en production</b>.</td>
+      <td>>Doing the exercises, without relying on clues and solutions, and completing steps 4 (logging) and 5 (deployment).</td>
     </tr>
   </tbody>
 </table>
@@ -41,67 +45,52 @@ editor_options:
 
 # Introduction {.unnumbered}
 
-Flightradar24 est un service de suivi des vols qui fournit des informations en temps réel sur des milliers d'avions dans le monde entier. [Le site Internet](https://www.flightradar24.com/) propose une visualisation interactive des vols en cours à chaque instant, comportant des informations issues de plusieurs sources sur chaque vol. Des données de position sont agrégées avec des données sur les horaires et le statut des vols provenant des compagnies aériennes et des aéroports.
+What is the project about? What data, what methods, what skills?
 
-![Site Internet FlightRadar24](img/fr24.jpg)
+# Structure of the project
 
-Flightradar24 vend la plupart de ces données disponibles en temps réel, ainsi que des fichiers d'historiques de vols. Certaines données en temps réel sont toutefois disponibles en accès libre. Il est possible de récupérer ces données de manière programmatique en utilisant par exemple [cette librarie Python](https://github.com/JeanExtreme002/FlightRadarAPI).
+This project has five steps (listed in the banner at the top of the page):
 
-Avec ce sujet, nous vous proposons de reconstruire une interface utilisateur qui se rapproche de celle du [site FlightRadar24](https://www.flightradar24.com/) avec Python. Une version démo de l'application est accessible via le bandeau en haut de cette page.
+- data generation;
+- data preprocessing;
+- model fitting and evaluation;
+- model logging with MLflow;
+- deployment.
 
-![Reconstruction de l'interface utilisateur FlightRadar24](img/app_preview.jpg)
+# Initialization of the project
 
-L'objet de ce sujet est de reconstruire pas à pas l'interface utilisateur de FlightRadar24. Ce faisant, ce sujet vous apprendra trois choses:
-
--   Récupérer les données de FlightRadar24 avec interface de programmation Python ;
--   Développer un site interactif avec [Dash](https://dash.plotly.com/), un framework Python réputé servant à construire des applications de visualisation de données ;
--   Déployer facilement une application de visualisation dans un environnement Cloud.
-
-# Déroulement du sujet
-
-Ce sujet comporte 5 parties listées dans le bandeau en haut de la page :
-
--   Dans la première partie, nous explorerons les données disponibles via une [interface de programmation](https://github.com/JeanExtreme002/FlightRadarAPI) ;
--   Dans la deuxième partie, nous écrirons une première version de l'application de visualisation ;
--   Dans les troisième et quatrième parties, nous raffinerons l'application ;
--   Dans la cinquième partie, nous verrons comment déployer l'application sur le [SSP Cloud](https://datalab.sspcloud.fr/) et la rendre accessible depuis Internet.
-
-# Initialisation du projet
-
-## Récupérer le projet avec `Git` {{< fa brands git-alt >}}
+## Clone the project with `Git` {{< fa brands git-alt >}}
 
 ::: {.callout-note appearance="simple"}
 ## Attention
 
-Pour se lancer dans le sujet, commencer par ouvrir un service [Vscode-python](https://datalab.sspcloud.fr/launcher/ide/vscode-python). Pour éviter les problèmes plus tard, il faut impérativement modifier deux éléments de configuration du service :
+Pour se lancer dans le sujet, commencer par ouvrir un service [Vscode-python](https://datalab.sspcloud.fr/launcher/ide/vscode-python). Pour éviter les problèmes plus tard, il faut impérativement modifier deux éléments de configuration du service:
 
 -   Dans l'onglet *Networking* de la configuration, cocher la case "Enable a custom service port" ;
 -   Dans l'onglet *Kubernetes* de la configuration, changer le rôle en `admin`.
 :::
 
-Dans le service créé, cloner le projet depuis un Terminal avec la commande
+Create a VScode service on SSP Cloud. In the service, open a terminal by clicking on {{< fa brands fa-bars >}}, then `Terminal > New Terminal`. Clone the project repository with:
 
 ```         
-git clone https://github.com/InseeFrLab/funathon2024_sujet3.git
+git clone https://github.com/AIML4OS/funathon-project1.git
 ```
 
 Le projet a la structure suivante :
 
--   Les fichiers `.qmd` ainsi que le fichier `_quarto.yaml` ont servi à la construction de ce site ;
--   Le fichier `requirements.txt` possède toutes les dépendances Python nécessaires pour le sujet ;
--   Plusieurs versions de l'application, à différents stades du développement, et à modifier lors des exercices sont situées dans les répertoire `intermediate_app`, `better_app`, `even_better_app` et `final_app` ;\
--   Le corrigé (version finale) de l'application se trouve dans le répertoire `correction` ;
--   Le fichier `Dockerfile` et les fichiers du répertoire `kubernetes` serviront au déploiement de l'application.
+-   The `.qmd` files and the `_quarto.yaml` file are necessary to build the website ;
+-   The file `pyproject.toml` describes the dependencies of the project ;
+-   Intermediate solutions to the exercices are available in the `intermediate_solutions` folder; 
+-   The final solution is available in the `final_solution` folder;
+-   TO BE COMPLETED DEPENDING ON THE PROJECT (`Dockerfile`, `kubernetes`...)/
 
-## Installation des librairies nécessaires
+## Installation of dependencies
 
-Pour progresser, il vous faudra installer quelques librairies qui sont listées dans le fichier `requirements.txt`. Pour ce faire, depuis un Terminal, exécutez la commande
+Install the project dependencies by running the following command in the terminal:
 
 ```         
-pip install -r requirements.txt
+uv sync
 ```
-
-Pour ouvrir un terminal, il suffit de cliquer sur le menu VScode en haut à gauche (les trois petites barres horizontales), puis `Terminal > New Terminal`. 
 
 ::: {.callout-note appearance="simple"}
 
