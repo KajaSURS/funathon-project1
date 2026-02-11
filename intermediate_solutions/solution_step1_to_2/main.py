@@ -16,46 +16,40 @@ pl.Config.set_tbl_rows(50)  # show 20 rows
 data = pl.read_parquet('s3://confpns/synthetic-transactions/rawdata/transactions/transactions_flats_final.parquet')
 data
 # %%
-data2 = data.filter(
-            pl.col("ccodep")=="75"
-            ).select(["x", "y", "valeurfonc"]).with_columns(
+data2 = data.select(["ccodep", "x", "y", "valeurfonc"]).with_columns(
                 valeurfonc_log=pl.col("valeurfonc").log(base=10)
             )
 # %%
 (
     p9.ggplot(
-        data2,
+        data2.filter(pl.col("ccodep")=="75"),
         p9.aes("x","y", colour="valeurfonc_log")
     ) +
     p9.geom_point(size=0.05)+
-    p9.theme_matplotlib()
+    p9.theme_matplotlib() +
+    p9.ggtitle("Localization of flat transactions in Paris with price")
 )
+
 # %%
-# Retrouver la mutation 
 (
     p9.ggplot(
-        data.filter(
-            pl.col("x")>=-1.599, 
-            pl.col("x") <= -1.598, 
-            pl.col("y") >= 48.838, 
-            pl.col("y") <= 48.839, 
-            pl.col("valeurfonc") <=150000
-            ).select(["x", "y", "anneemut", "valeurfonc"]),
-        p9.aes("x","y", size="anneemut", colour="valeurfonc")
-        ) +
-    p9.geom_point() 
+        data2,
+        p9.aes("x","y")
+    ) +
+    p9.geom_point(size=0.05)+
+    p9.theme_matplotlib() +
+    p9.ggtitle("Localization of flat transactions in France since 2010")
 )
+# %%
 
-data.filter(
-            pl.col("x")>=-1.599, 
-            pl.col("x") <= -1.598, 
-            pl.col("y") >= 48.838, 
-            pl.col("y") <= 48.839, 
-            pl.col("valeurfonc") <=150000, 
-            pl.col("valeurfonc") >=100000
-            ).sort("anneemut")
-
-        # idmutation : "DVF+_3356048"
+# data.filter(
+#             pl.col("x")>=-1.599, 
+#             pl.col("x") <= -1.598, 
+#             pl.col("y") >= 48.838, 
+#             pl.col("y") <= 48.839, 
+#             pl.col("valeurfonc") <=230000, 
+#             pl.col("valeurfonc") >=175000
+#             ).sort("anneemut")
 
 # %%
 
@@ -63,10 +57,9 @@ data_h = pl.read_parquet("s3://confpns/synthetic-transactions/rawdata/transactio
 
 # %%
 # Retrouver la mutation 
-data_h.filter(
-            pl.col("idmutation")=="DVF+_6242255"
-            ).glimpse()
-# %%
+# data_h.filter(
+#             pl.col("idmutation")=="DVF+_6242255"
+#             ).glimpse()
 
 
 # %%
@@ -133,7 +126,51 @@ def analyse_colonnes(df: pl.DataFrame) -> pl.DataFrame:
 descr_df = analyse_colonnes(data)
 #%%
 print(descr_df)
-# print(descr_df.to_pandas().to_markdown(index=False))
+
 
 # %%
+# print(descr_df.to_pandas().to_markdown(index=False))
 
+
+# %%
+# Variable to keep
+col_to_keep = (
+    pl.from_dicts(
+        [{"idmutation":0,"datemut":0,"anneemut":0,"moismut":0,"idnatmut":0,
+        "libnatmut":0,"valeurfonc":0,"dteloc":0,"jannath":0,"ccodep":0,
+        "depcom":0,"x":0,"y":0,"distance_ltm":0,"distance_ltm_corr":0,
+        "dnbniv":1,"dnbbai":1,"dnbdou":1,"dnblav":1,"dnbwc":1,"dnbppr":1,
+        "dnbsam":1,"dnbcha":1,"dnbcu8":1,"dnbcu9":1,"dnbsea":1,"dnbann":1,
+        "dnbpdc":1,"dsupdc":1,"geaulc":0,"gelelc":0,"gesclc":0,"ggazlc":0,
+        "gasclc":0,"gchclc":0,"gvorlc":0,"gteglc":0,"dniv":1,"dcntsol":1,
+        "dcntagri":1,"dcntnat":1,"nb_garages":1,"nb_piscines":1,
+        "nb_terrasses":1,"nb_greniers":1,"nb_caves":1,"nb_autresdep":1}]
+    )
+    .unpivot()
+    .filter(pl.col("value") == 1)
+    .select("variable")
+    .to_series()
+    .to_list()
+)
+col_to_keep
+# %%
+(
+    p9.ggplot(data.select(["dnbniv", "dnbbai", 'nb_caves']).unpivot(), p9.aes(y='value', x='variable')) +
+    p9.geom_boxplot() +
+    p9.facet_wrap('~variable', scales='free') +
+    p9.theme_minimal()
+)
+
+# %%
+# Plot price (log) - seems ok 
+(
+    p9.ggplot(data.with_columns(
+                valeurfonc_log=pl.col("valeurfonc").log(base=10)
+            ).select(["valeurfonc_log"]).unpivot(value_name="log_price"), 
+            p9.aes(x='log_price')
+    ) +
+    p9.geom_histogram(bins = 100, fill='skyblue', color='black') +
+    p9.facet_grid('~variable.', scales='free') +
+    p9.theme_minimal()
+)
+# %%
