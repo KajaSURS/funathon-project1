@@ -1,5 +1,5 @@
 ---
-lang: fr-FR
+lang: en-US
 title: Data preprocessing
 
 format:
@@ -7,138 +7,673 @@ format:
     number-sections: true
 ---
 
-Cette [librairie](https://github.com/JeanExtreme002/FlightRadarAPI) Python propose une API permettant d'accéder aux données gratuites de FlightRadar24. Une documentation est accessible [ici](https://jeanextreme002.github.io/FlightRadarAPI/python/). Comme toute API, cette API s'utilise en deux temps :
+In this section, we will prepare the data to be used for training our machine learning model. 
+Pre-processing involves a lot of steps and many go between the models, the data and the pre-processing. 
+It also involves to have a very close look at the data to understand it before feeding it into a model. 
+It is therefore quite normal for **pre-processing to take time**. 
 
-- on commence par initialiser un client pour pouvoir interroger le serveur ;
-- on fait ensuite appel à plusieurs méthodes pour récupérer différents types de données. 
+Pre-processing is built on `pandas` and on scikit-learn's pipeline structures.
+If you want more information, don't hesitate to go to [pandas documentation](https://pandas.pydata.org/pandas-docs/stable/reference/index.html) and follow one of the very good online [MOOC made by scikit-learn](https://inria.github.io/scikit-learn-mooc/) to understand the package and its way of working.  
 
-Passons à l'exercice.
+To have a better understanding of what we will do, here is an overview of the pre-processing steps we will introduce in this part. 
+
+![Overview of the pre-processing](pre-processing.png)
 
 ::: {.callout-note appearance="simple"}
+## Watch out
 
-## Attention
+All data inputs are available on the following S3 bucket : `s3://confpns/synthetic-transactions`
 
-Pour explorer l'API plus facilement et de manière interactive, on pourra travailler depuis un [notebook Jupyter](https://jupyter.org/try-jupyter/notebooks/?path=notebooks/Intro.ipynb) (extension `.ipynb`).
+You have to load two different files :
+
+-   `rawdata/transactions/transactions_houses_final.parquet` for houses transactions
+-   `rawdata/transactions/ transactions_flats_final.parquet` for flats transactions
+
+TO BE CHECKED - à refaire avec les données synthétiques finales - une seule base
 :::
 
-::: {.callout-tip collapse="false" icon=false}
-## `<i class="bi bi-book"></i>`{=html} Exercice 1: Utilisation de l'API FlightRadarAPI
+:::: {.callout-tip collapse="false" icon="false"}
+## <i class="bi bi-book"></i> Exercice 1: Understanding data inputs
 
-1. Initialiser un client `FlightRadar24API`.
+The aim of this part is to manipulate new database and understand features in order to prepare the preprocessing steps: it's an important step in ML pipeline.
+
+1.  **Initialiaze a DuckDB connection.**
+
+    <details>
+
+    <summary>Click to view a hint</summary>
+
+    First, you need to open a connection in the memory. Second, you need to create a secret table with S3 credentials
+
+    </details>
+
+    ```{python}
+    #| code-fold: true
+    #| code-summary: See the solution
+    #| code-overflow: scroll
+
+    import duckdb
+
+    # Create a non-persistent connection (the database exists only while the connection is alive and disappears when it is closed)
+    con = duckdb.connect(database=":memory:")
+
+    # You need to create a secret table with all the S3 credentials
+    con.execute(
+        f"""
+    CREATE SECRET secret_s3 (
+        TYPE S3,
+        KEY_ID '{os.environ["AWS_ACCESS_KEY_ID"]}',
+        SECRET '{os.environ["AWS_SECRET_ACCESS_KEY"]}',
+        ENDPOINT '{os.environ["AWS_S3_ENDPOINT"]}',
+        SESSION_TOKEN '{os.environ["AWS_SESSION_TOKEN"]}',
+        REGION 'us-east-1',
+        URL_STYLE 'path',
+        SCOPE 's3://confpns/synthetic-transactions/'
+    );
+    """
+    )
+    ```
+
+2.  **Load, with DuckDB, all data inputs in a DataFrame `trans`** **(for transactions).**
 
 ```{python}
 #| code-fold: true
-#| code-summary: Cliquer pour voir la réponse
+#| code-summary: See the solution
 #| code-overflow: scroll
 
-from FlightRadar24 import FlightRadar24API
-fr_api = FlightRadar24API()
+# We load all transactions made in France between 2010 and 2022
+trans = con.sql(
+    f"""
+        SELECT * FROM read_parquet('s3://confpns/synthetic-transactions/rawdata/transactions/transactions_houses_final.parquet')
+        UNION ALL
+        SELECT * FROM read_parquet('s3://confpns/synthetic-transactions/rawdata/transactions/transactions_flats_final.parquet')
+    """).to_df()
+
 ```
 
-2. En utilisant le client, compter le nombre de compagnies aériennes.
+::: {.callout-note title="Another way to load the data"}
+DuckDB is not the only tool you can use to read from the data. You can also use pandas' built-in `read_parquet` function for example.
 
-```{python}
+```{.python}
 #| code-fold: true
-#| code-summary: Cliquer pour voir la réponse
 #| code-overflow: scroll
+import pandas as pd
 
-airlines = fr_api.get_airlines()
-print(f"Il y a {len(airlines)} compagnies aériennes différentes dont on peut récupérer les vols.")
+# We load all transactions made in France between 2010 and 2022
+trans = pd.concat(
+    [
+        pd.read_parquet('s3://confpns/synthetic-transactions/rawdata/transactions/transactions_houses_final.parquet'),
+        pd.read_parquet('s3://confpns/synthetic-transactions/rawdata/transactions/transactions_flats_final.parquet')
+    ]
+    )
+
+```
+:::
+
+3.  **Search some information about `trans` dataframe**
+
+    It is important to know the quality of your data and the definition of the columns when you train a ML model *(missings values, types of columns for exemple).* Details about the dataset, including a dictionnary of variables, is available [here](index.qmd).
+
+```{.python}
+#| code-fold: true
+#| code-summary: See the solution
+#| code-overflow: scroll
+#| eval: false
+
+trans.shape # (nb_rows, nb_columns)
+trans.dtypes # type of each columns
+trans.columns # list of columns
+trans.index # index
+trans.info() # full summary: types + non-null values + memory
+trans.describe() # statistics (count, mean, std, min, max, quartiles)
+trans.head(n=5) # first n rows
+df.isnull().sum() # nb of NaN per column
+df.notnull().all() # column with no NaN?
 ```
 
-3. Compter le nombre de zones géographiques utilisables et en afficher une selection.
+4.  **Filter the dataframe to keep only housing transactions made inside the Paris area (the region called *Île de France*)**
 
 <details>
-<summary>Cliquer pour voir un indice</summary>
-La méthode `FlightRadar24API.get_zones` retourne un dictionnaire contenant une clé pour chaque zone.
+
+<summary>View a hint</summary>
+
+You need to filter with the feature `ccodep`, with the following department codes for Paris area : ["75", "77", "78", "91", "92", "93", "94", "95"]
+
 </details>
 
 ```{python}
 #| code-fold: true
-#| code-summary: Cliquer pour voir la réponse
+#| code-summary: See the solution
 #| code-overflow: scroll
+import pandas as pd
 
-zones = fr_api.get_zones().keys()
-zones = list(zones)
-print(f"Il y a {len(zones)} zones différentes, dont les zones '{zones[0]}', '{zones[1]}', '{zones[2]}', etc.")
+trans = trans[trans["ccodep"].isin(["75", "77", "78", "91", "92", "93", "94", "95"])]
+```
+::::
+
+::: {.callout-tip collapse="false" icon="false"}
+## <i class="bi bi-book"></i> Exercice 2: Analyzing data inputs
+
+We will transform a few features for the training part. It will enhance the quality of our model.
+
+## Analyze the expected target (variable `y` in ML models)
+
+1.  **Create the final target**
+
+    You need to consider what the target prediction should be. In the case of housing prices, should it be the total property price or the price per square meter? In the project, the target is **normalized** to represent the **price per square meter**, for the following reasons :
+
+    -   all observations have the same importance with this target : predicting price per square meter prevents size from monopolizing the variance-reduction criterion at each split, freeing the tree to capture more informative features ;
+    -   when size is no longer the dominant source of variance in the target, splits are driven by economivally meaningful features rather than a mechanical size effect ;
+    -   Feature importance scores are less distorted when size no longer absorbs a disproportionate share of variance reduction across splits ;
+
+    <details>
+
+    <summary>Click to view a hint</summary>
+
+    You need to create a new target `valfonc_m2` with features `valeurfonc` (housing price) and `dsupdc`
+
+    </details>
+
+    ```{python}
+    #| code-fold: true
+    #| code-summary: See the solution
+    #| code-overflow: scroll
+
+    trans["valfonc_m2"] = trans["valeurfonc"] / trans["dsupdc"]
+    ```
+
+2.  **Check if the target must be transformed by plots**
+
+    For better prediction quality, you need to have a look at the distribution of your target variable and check whether it is symmetric. If the distribution is not symmetric, the prediction may be less accurate for certain range of values :
+
+    -   lower values when the distribution is right-skewed ;
+    -   higher values when the distribution is left-skewed ;
+
+    The reason differs depending on the model used :
+
+    -   For Random Forest (random forests), the final prediction is the mean value of Y across all observations contained in the leaf. Since the mean is not a robust statistic, extreme values can strongly influence the final prediction associated with that leaf.
+    -   For Gradient Boosting (gradient boosting), extreme values can lead to overfitting. Since gradient boosting iteratively reduces residuals by adding new trees, observations with very large residuals - often caused by extreme values - can have a disproportionate influence on the model.
+
+    ```{python}
+    #| code-fold: true
+    #| code-summary: See the solution
+    #| code-overflow: scroll
+
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    # --- Update with your target ---
+    y = trans["valfonc_m2"]
+    p = np.percentile(y, 99.5)
+
+    fig, axes = plt.subplots(4, 1, figsize=(12, 15))
+
+    for ax, (data, label) in zip(axes, [(y, "Y"), (y[y <= p], "Y filtered"), (np.log(y), "log(Y)"), (np.log(y[y <= p]), "log(Y) filtered")]):
+        ax.hist(data, bins="auto", edgecolor="white", color="#334887", alpha=0.95)
+        ax.set_title(label)
+        ax.set_xlabel("Price per square meter")
+        ax.set_ylabel("Number of transactions")
+
+    plt.tight_layout()
+    plt.show()
+    ```
+
+    In this case, you can see the difference between `Y` and `log(Y)` distribution : it is more symmetric with `log(Y)` distribution.
+
+    Moreover, prices distribution is usually right skewed as they are more often positive, and **prices usually present extreme values that logarithm will soften**.
+
+    We will therefore apply a log transformation to the target variable when constructing the train pipeline.
+
+3.  **Handle outlier or erroneous values in the target variable**
+
+    Handling outlier or erroneous values is particularly important when you need to train a gradient boosting model. Here, you can :
+
+    -   delete all observations with a wrong target value ;
+    -   modify a value, if you have reliable information to support the imputation ;
+    -   apply a method to identify and filter outliers in the target variable.
+
+    The methods you chose depends on the data you have at hand, the issue you're dealing with and your knowledge of the field.
+
+    If you want to focus your study on tails phenomena, the way you deal with this issue will be very important because you want to disentangle the richness of the extreme data from bad data. If you're more focused on predicting the median price, the risk associated with cleaning too abruptly extreme phenomena is smaller.
+
+    In our case, one of the flaw of the data is for example partial selling (when somebody sells only a fraction of the property - leading to price per square meter too low) and error mistakes in the data (if the property for example has been renovated and extended and the reported floor area hasn't been updated - leading to a too high price per square meter). No expert knowledge can give a threshold above which a price is for sure too high.
+
+    We will therefore apply first a deterministic method. For example, we can set a threshold when analyzing housing price distribution (see previous plots and the describe methode). If the price per square meter of the transaction exceeds €200.000 for example, the value can be considered erroneous.
+
+    In the same way, we can have a look at the lower dristribution to see if there is an issue with the left part of the distribution.
+
+```{python}
+
+fig, axes = plt.subplots(2, 1, figsize=(12, 15))
+
+for ax, (data, label) in zip(axes, [(y[y <= 2000], "Y below 2000€ per sqm"), (y[y <= 500], "Y below 500€ per sqm")]):
+    ax.hist(data, bins="auto", edgecolor="white", color="#334887", alpha=0.95)
+    ax.set_title(label)
+    ax.set_xlabel("Price per square meter")
+    ax.set_ylabel("Number of transactions")
+
+plt.tight_layout()
+plt.show()
 ```
 
-4. On souhaite maintenant récupérer les vols de Boeing 77W en activité en Europe de la compagnie aérienne Air France. Utiliser la méthode `FlightRadar24API.get_flights` pour donner un compte de ces vols. La chaîne de caractères qui représente Air France est `"AFR"` et celle qui représente le type d'aéronef est `"B77W"`.
+```         
+By looking at the graph, we see that the left tail gets bigger the closer we are to price going to 0.
+It may indicate an issue with data around these points.  
+By looking at this phenomena closer, we can see that a threshold of €100, €200 or €300 would filter out these issues. 
+
+The second step is to apply some statistic methods. 
+For example, we can use the **Interquartile Range (IQR)*** *to remove outlier target values*.
 
 <details>
-<summary>Cliquer pour voir un indice</summary>
-La méthode à utiliser prend un argument `bounds`, que la méthode `FlightRadar24API.get_bounds` permet de récupérer à partir d'une zone géographique.
+
+<summary>Click to view a hint</summary>
+
+**Interquartile Range** method can keep all observations with target value between `Q1-1.5*(Q9-Q1)` and `Q9+1.5*(Q9-Q1)` .
+
 </details>
+```
 
 ```{python}
 #| code-fold: true
-#| code-summary: Cliquer pour voir la réponse
+#| code-summary: See the solution
 #| code-overflow: scroll
 
-airline_icao = "AFR"
-aircraft_type = "B77W"
+n0 = trans.shape[0]
+print(f"{n0} rows before filtering")
 
-zone = fr_api.get_zones()["europe"]
-bounds = fr_api.get_bounds(zone)
+# Apply some deterministic threshold on the dataframe
+trans = trans[(trans["valfonc_m2"] < 200000) & (trans["valfonc_m2"] > 100)]
 
-afr_flights = fr_api.get_flights(
-    aircraft_type = aircraft_type,
-    airline = airline_icao,
-    bounds = bounds
-)
-print(f"{len(afr_flights)} aéronefs B77W d'Air France sont actuellement en activité en Europe.")
+print(f"{trans.shape[0]} rows after deterministic filtering")
+
+# Apply IQR methods for the outlier removal
+def outlier_transform(y, lower=0.1, upper=0.9):
+    """
+    Transform Y target to log(Y) and remove outliers with IQR method
+
+    Args :
+        y : target
+        lower: lower quantile for the IQR
+        upper: upper quantile for the IQR
+    """
+    Q_lower = np.quantile(y, lower)
+    Q_upper = np.quantile(y, upper)
+    IQR = Q_upper - Q_lower
+
+    mask = (y >= Q_lower - 1.5 * IQR) & (y <= Q_upper + 1.5 * IQR)
+    return mask
+
+mask = outlier_transform(trans["valfonc_m2"])
+trans = trans[mask].reset_index(drop=True)
+
+n1 = trans.shape[0]
+
+print(f"{n1} rows after deterministic and statistic filtering")
+
 ```
 
-5. Il est possible de changer la configuration du client avec les méthodes `FlightRadar24API.get_flight_tracker_config` et `FlightRadar24API.set_flight_tracker_config`. Changer la configuration pour récupérer 5 vols à l'aide de la méthode `FlightRadar24API.get_flights` sans fournir d'argument.
+Applying these filters methods has dropped about `{python} f'{(n0 - n1)/n0}:.2f'` % of the transactions.
+
+4.  **Handle missing values in the target variable**
+
+The target variable should not contain missing values when using machine learning algorithms. 
+They should therefore be either dropped or imputed if you have reliable information to support the imputation.
+
+For our project, we will delete all observations with a missing target value. 
+You can see [pandas documentation](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.dropna.html#pandas.DataFrame.dropna) for help. 
+
 
 ```{python}
 #| code-fold: true
-#| code-summary: Cliquer pour voir la réponse
+#| code-summary: See the solution
 #| code-overflow: scroll
 
-flight_tracker = fr_api.get_flight_tracker_config()
-flight_tracker.limit = 5
-fr_api.set_flight_tracker_config(flight_tracker)
-
-flights = fr_api.get_flights()
-print(f"Informations récupérées sur {len(flights)} vols.")
+trans = trans.dropna(subset = "valfonc_m2")
 ```
 
-7. Pour analyser les détails d'un vol, il faut utiliser les méthodes `FlightRadar24API.get_flight_details` pour collecter les détails d'un vol précis via l'API, puis `Flight.set_flight_details` pour les attribuer à ce vol (car seulement quelques informations sont collectées par défaut). Explorer les informations disponibles sur un vol (objet de la classe `Flight`), par exemple en listant les attribus avec la commande `dir(my_flight)`. On pourra notamment regarder les attributs suivants :
+## Preparation of the features (variables X of the ML model)
 
-  - `latitude`: Latitude de l'aéronef ;
-  - `longitude`: Longitude de l'aéronef ;
-  - `id`: Identifiant du vol ;
-  - `icao_24bit`: Identifiant de l'aéronef ;
-  - `heading`: Cap de vol (en degrés) ;
-  - `altitude`: Altitude (en pieds) ;
-  - `ground_speed`: Vitesse au sol (en noeuds) ;
-  - `aircraft_code`: Type d'aéronef ;
-  - `origin_airport_name`: Aéroport d'origine ;
-  - `destination_airport_name`: Aéroport de destination ;
-  - `airline_iata`: Code IATA de compagnie aérienne ;
-  - `vertical_speed`: Vitesse verticale (en pieds par minute) ;
-  - `airline_icao`: Code ICAO de compagnie aérienne.
+Before transforming features, you have to keep in mind **two essential points when working with trees** :
 
-Essayez d'identifier les différentes informations associées à un vol.
+-   **No need to normalize, standardize or remove extreme values from numerical features**. Any transformation done with *monotonic function* is therefore useless (like log or square function). But a new feature defined as the quotient of two features does add information to the dataset. 
+
+-   **No need to remove correlated features, gradient boosting and random forests are robust to multicollinearity.** However, you can remove them if you want to accelerate the training phase but it isn't an issue for this project.
+
+### Categorical features
+
+This part is the most delicate and complex point when you use random forests and gradient boosting. Indeed, you need to **transform categorical features to use them** in the training phase.
+
+Three different encoding methods exist for categorical features : 
+
+- **one-hot encoding** : it transforms a categorical feature into a serie of binaries features, each representing one modality of the original feature. However, this method increases the dimensionality of the data : it requires more training time and memory. For example, it would create an indicator for each city code in the data to test whether the property is located in this city. At the French national level, this represents around 35.000 new variables ! Therefore, this method is not recommended for features with more than 10 modalities. 
+- **ordinal encoding** : transform each modality of categorical feature into a unique integer. This method is suitable for feature with ordered modalities (age, income). Therefore, it is not recommended for features with no natural ordering. 
+- **target encoding** (for *CatBoost* and *scikit-learn* algorithms): replace each modality of categorical feature with the mean of the target for this modality. Useful for categorical features with many modalities and with no natural ordering.
+
+You can find more details on scikit-learn's [online documentation](https://inria.github.io/scikit-learn-mooc/python_scripts/03_categorical_pipeline.html). 
+
+You have also another method (not an encoding), namely the **native support for categorical feature**, used in gradient boosting : the aim is to find the best split of the modalities of a categorical feature into two subset. This method has several advantages: it reduces the number of splits, produces simpler trees and increase the computational efficiency of training.
+
+What is the list of variable that are categorical ? Which encoding should we use ?
+Do not write any code for now, we will do so later. 
+
+### Numerical features
+
+For tree-based ensemble methods, most preprocessing steps applied to numerical features are unnecessary. Since splits rely solely on the relative order of values, monotonic transformations (e.g. `log(x)`, `x²`) and scaling (e.g. standardisation, normalisation) have no effect on the model's behaviour.
+
+Keep it in mind when you work on ensemble methods !
+
+### Missing values
+
+Ensemble methods handle missing values natively, so pre-treatment is technically optional — but still advisable for safety. The key practical point is always to verify that missing values are actually coded as `NaN` (or whatever the implementation expects) and not disguised behind another modality, such as `0`, `-999`, or a string placeholder, otherwise the native support won't work as intended.
+Here, the number of missing value is minimal and focused on some variable. We will filter out these elements.
+
+### Time features
+
+All datetime features must be preprocessed — you cannot use the `Timestamp` type as-is for training. In this project, we will handle these features as follows: 
+
+- create a new feature to compute the elapsed time between a reference date and the transaction date, in order to capture the trend of transactions ;
+- keep months feature to capture the seasonality of transactions and convert it to numeric ;
+- keep years feature to capture years specifics patterns and convert it to numeric.
+
+You will see in the section {#sec-scikit-learn-pipeline} how preprocessing can be performed with scikit-learn.
+
+## Now let's go : prepare the dataframe for the training
+
+1.  Have a look at the list of variables available. Which ones do not bear any additionnal information and can be dropped ?
+
+    <details>
+
+    <summary>Click to view a hint</summary>
+
+    We chose to drop the following variables : `idmutation` (meaningless), `idnatmut` (meaningless), `libnatmut` (always equal to the same value), `valeurfonc` (already taken care of with our target), `ccodep` (geographical information is comprised in geographical coordinates x and y), `depcom` (geographical information is comprised in geographical coordinates x and y), `distance_ltm` and `distance_ltm_corr` have no meaningful information in the Paris area, far from the sea. 
+
+
+    </details>
 
 ```{python}
 #| code-fold: true
-#| code-summary: Cliquer pour voir la réponse
+#| code-summary: See the solution
 #| code-overflow: scroll
 
-flight = flights[2]
-flight_details = fr_api.get_flight_details(flight)
-flight.set_flight_details(flight_details)
-print(
-  f"Le vol {flight.id} au départ de l'aéroport {flight.origin_airport_name} "
-  f"et à destination de {flight.destination_airport_name} se déplace à une vitesse "
-  f"de {flight.ground_speed} noeuds."
-)
-print(
-  f"L'appareil est un aéronef {flight.aircraft_code} de la compagnie {flight.airline_icao}."
+df = trans.drop(columns=[
+    'idmutation', "idnatmut", "libnatmut", 
+    "valeurfonc", "ccodep", "depcom", "distance_ltm", "distance_ltm_corr"
+])
+
+```
+
+2.  For convenience, filter the rows containing at least one missing value. 
+You can check pandas's `dropna` function on [their documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.dropna.html#pandas.DataFrame.dropna). Check before filtering the number of rows concerned.  
+
+```{python}
+# Printing all rows containing at least one NA
+df[df.isna().any(axis=1)]
+
+# Filtering NA values
+df = df.dropna()
+```
+
+
+3.  For convenience, we want to update the modalities of the `dteloc` variable : `1` means it's a house and `2` it's a flat. 
+You can check pandas's Categorical function on [their documentation](https://pandas.pydata.org/docs/reference/api/pandas.Categorical.html#pandas.Categorical). 
+
+```{python}
+#| code-fold: true
+#| code-summary: See the solution
+#| code-overflow: scroll
+
+df["dteloc"] = pd.Categorical(
+    df["dteloc"],
+    categories=["1", "2"],
+    ordered=False
+).rename_categories({"1": "House", "2": "Flat"})
+```
+
+
+4.  The codification of categorical variable can be computational intensive. `dteloc` has only two modalities but check the number of modalities of `jannath`. To speed-up the computation, can we regroup modalities together ?  How can we do it ? 
+
+```{python}
+#| code-fold: true
+#| code-summary: See the solution
+#| code-overflow: scroll
+
+counts = df.value_counts("jannath").reset_index()
+counts[counts["jannath"] < 1850].describe() # there more than 400 different years of construction, going from 13th century to now. Maybe we can bundle together years before 1850 and group them by decade
+
+counts_10 = ((df["jannath"] // 10)*10).value_counts().reset_index()  # 76 modalities
+counts_10[counts_10["jannath"] < 1850].describe()  # years before 1850 represent 58 modalities with maximal class of about twenty thousands operations - ok
+counts_10[counts_10["jannath"] < 1850]["count"].sum()  
+
+# Replacing year of construction by decade and merging together all years before 1850
+df['jannath_10'] = (df['jannath'] // 10)*10
+df['jannath_10'] = df['jannath_10'].where(df['jannath_10'] >= 1850, 1840)
+
+# Dropping old column
+df = df.drop(columns=["jannath"])
+```
+
+
+5.  Split the dataframe in train and test set. 
+
+    <details>
+
+    <summary>Click to view a hint</summary>
+
+    you can use the function `train_test_split` from the module `sklearn.model_selection` and its [documentation](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.train_test_split.html#sklearn.model_selection.train_test_split). 
+
+    </details>
+
+```{python}
+#| code-fold: true
+#| code-summary: See the solution
+#| code-overflow: scroll
+
+from sklearn.model_selection import train_test_split
+
+# Split features / target
+X = df.drop(columns="valfonc_m2")  # X must contain only the features we'll learn from
+y = df["valfonc_m2"]  # target must be a dataframe with 1 column
+
+# Split train / test set
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.2,
+    random_state=202605
 )
 ```
+
+Now that you are familiar with the main mechanisms of pre-processing for model training, we will move on to using scikit-learn modules to prepare for training.
+
+Scikit-learn has a very well crafted documentation, so please do not hesitate to go and have a look on [their website](https://scikit-learn.org/stable/api/index.html). 
+
 :::
 
-Dans la partie suivante, nous allons développer une première application de visualisation de vols utilisant cette API Python !
+::: {.callout-tip collapse="false" icon="false"}
+## <i class="bi bi-book"></i> Exercice 3: The scikit-learn pipeline
+
+You are going to made your first scikit-learn pipeline. To begin, you can go to the [scikit-learn quickstart page](https://scikit-learn.org/stable/getting_started.html) for an overview.
+
+### Step 1 : the Pipeline object {#sec-scikit-learn-pipeline}
+
+You need to create a **pipeline**, *ie.* an single object to chain multiple processing steps. First, you put your pre-processing step - all transformation you need for the data preparation - and the model you have chosen at the end. Instead of applying each step manually one after the other, the pipeline does it automatically in the right order, both during training and prediction.
+
+For the pipeline, two constructors are available : 
+
+- `make_pipeline` is a convenience shortcut that automatically names each step after its lowercased class name. It is ideal for quick prototyping. You can see this constructor in the quickstart page above and have more info in [scikit-learn's documentation](https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.make_pipeline.html). 
+
+*Example :*
+
+```{.python}
+from sklearn.pipeline import make_pipeline
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import OneHotEncoder
+
+pipe = make_pipeline(
+    OneHotEncoder(),
+    RandomForestRegressor()
+)
+```
+
+-   [`Pipeline`](https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html) requires explicit couples `("Name to use afterwards", estimator)` pairs, which pays off in production code: short, meaningful names keep parameters readable in cross validation process and improves clarity when the pipeline is logged on MLFlow. In the project, we will use `Pipeline` and not `make_pipeline.`
+
+*Example* :
+
+```{.python}
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestRegressor
+
+rf_pipeline = Pipeline([
+    ("preprocessor", preprocessor),
+    ("random forests", RandomForestRegressor(**rf_params))
+])
+```
+
+### Step 2 : the ColumnTransformer object
+
+When you create a pipeline, the first step is to prepare your data. The object `ColumnTransformer` can perform that : it allows you to apply different transformations to different columns of your dataset. It takes a list of `(name, transformer, columns)` tuples as input and outputs a single array with all transformed columns concatenated together.
+
+However, **`ColumnTransformer`** **delete all features which are not named inside the object**.
+
+You can also check on scikit-learn documentation for the [`make_column_selector` function](https://scikit-learn.org/stable/modules/generated/sklearn.compose.make_column_selector.html). Instead of writing down all the categorical variables, you can use it to automatically detect categorical columns based on their data types.  
+
+Here is an example of scikit-learn functions used for preprocessing. We will adapt these for the current project afterwards. 
+
+```{.python}
+from sklearn.compose import ColumnTransformer, make_column_selector as selector
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.pipeline import Pipeline
+
+# Example of code that can be used in machine learning scripts
+cols_cat = selector(dtype_exclude="number")  # Defines categorical features as all but non numerical
+cols_num = selector(dtype_include="number")  # Defines numerical features as columns with data types (dtypes) numerical
+
+preprocessor = ColumnTransformer([
+    ("num", StandardScaler(), cols_num), # scaling can be useful for some model but not for our project
+    ("cat", OneHotEncoder(), ["region", "job_type", "jannath_10"])
+    ],
+    remainder="passthrough" # the remainder parameter tells what to do with features not transformed. By default, non transformed data is dropped. Specifying "passthrough" passes on the data unchanged to the model. 
+)
+
+pipeline = Pipeline([
+    ("preprocessor", preprocessor),
+    ("model", RandomForestRegressor())
+]) 
+```
+
+## Now let's go : prepare the pipeline for the training
+
+We will now create our first pipeline to transform the data for the training phase. We will first use a Random Forest model and then compare with a gradient boosting model.  
+
+1.  Create the `ColumnTransformer` instance for the preprocessing step. Go and check [scikit-learn's documentation](https://scikit-learn.org/stable/modules/generated/sklearn.compose.ColumnTransformer.html). 
+
+    <details>
+
+    <summary>Click to view a hint</summary>
+
+    For the preprocessing step, you have to :
+
+    -   transform the `datemut` variable, a `Timestamp` feature to a elapsed feature (`ref_date = '2010-01-01 00:00'`). You can create a new function `date_to_days`, and apply it with [scikit-learn's `FunctionTransformer`](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.FunctionTransformer.html). Note that the output of your `date_to_days` function should be a Python array and that `.to_numpy().reshape(-1, 1)` applied to a Pandas Series will transform it to the correct type ; 
+    -   apply the chosen encoding method (OneHotEncoder) on categorical features.
+
+    </details>
+
+```{python}
+#| code-fold: true
+#| code-summary: See the solution
+#| code-overflow: scroll
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder, FunctionTransformer
+
+# Selection of numerical columns as the one with dtypes int32
+numeric_cols = X.select_dtypes(include="number").columns.to_list()
+
+def date_to_days(X: pd.Series, ref_date:pd.Timestamp):
+    # converts a date to a difference to ref_date : 
+    diff_dt = pd.to_datetime(X) - ref_date
+    # Extract days part from datetime object
+    diff_dt = diff_dt.dt.days
+    # Transform it from a Pandas series to a Numpy nd array, used by scikit learn for input
+    diff_dt = diff_dt.to_numpy().reshape(-1, 1)
+
+    return diff_dt 
+    
+date_transformer = FunctionTransformer(
+    date_to_days,
+    kw_args={"ref_date": pd.Timestamp('2010-01-01 00:00')}
+    )
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ("cat", OneHotEncoder(handle_unknown="ignore"), ["dteloc", "jannath_10"]),  # one-hot encoder on feature
+        ("dat", date_transformer, "datemut") # feature time since 01-01-2010
+    ],
+    remainder="passthrough"  # to keep features not transformed
+) 
+```
+
+2.  Create the Pipeline for training a RandomForestRegressor model.
+
+    <details>
+
+    <summary>Click to view a hint</summary>
+
+    For the pipeline steps, you have to :
+
+    -   create a `FunctionTransformer` instance for the `log` transformation of the target with either [`np.log`](https://numpy.org/doc/stable/reference/generated/numpy.log.html) or your own defined `log_transform` and `inverse_log_transform` functions ;
+    -   create a pipeline `rf_pipeline` with the preprocessing step `preprocessor` defined above and a RandomForestRegressor model ;
+    -   Write all hyperparameters you want to use for the `RandomForestRegressor` instance - have a tour on [the documentation](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestRegressor.html) ;
+    -   apply this target transformation to the pipeline with [`TransformedTargetRegressor`](https://scikit-learn.org/stable/modules/generated/sklearn.compose.TransformedTargetRegressor.html#sklearn.compose.TransformedTargetRegressor).
+
+    </details>
+
+```{python}
+#| code-fold: true
+#| code-summary: See the solution
+#| code-overflow: scroll
+from sklearn.preprocessing import OneHotEncoder, FunctionTransformer
+from sklearn.compose import ColumnTransformer, TransformedTargetRegressor
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestRegressor
+
+def log_transform(y):
+    return np.log10(y)
+
+def inverse_log_transform(y):
+    return 10 ** y
+
+y_transformer = FunctionTransformer(
+    func = log_transform,
+    inverse_func = inverse_log_transform)
+
+# Other option with Numpy : 
+# y_transformer = FunctionTransformer(
+#     func=np.log,
+#     inverse_func=np.exp)
+
+rf_params = {
+    "n_estimators": 100,
+    "max_depth": 5,
+    "max_features": "sqrt",
+    "min_samples_split": 2,
+    "min_samples_leaf": 10,
+    "random_state": 202605,
+    "oob_score": True,
+    "n_jobs": -1,  # The number of jobs to run in parallel, -1 using all processors
+}
+
+rf_pipeline = Pipeline([
+    ('preprocessing', preprocessor),
+    ('random forests', RandomForestRegressor(**rf_params))
+])
+
+model = TransformedTargetRegressor(
+    regressor=rf_pipeline,
+    transformer=y_transformer
+)
+
+```
+
+:::
+
+Congrats ! You have completed the data preparation exercises. Now you can choose one of the two model you'll want to train - or do both ! 💪
