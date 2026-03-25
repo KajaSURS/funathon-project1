@@ -44,26 +44,27 @@ dict_fr_en = {
   'dcntsol':['s_land_artif', 'Artificial land area (square meters)', 'Artificial land includes recreational areas, land, building plots and gardens. Artificial land refers to land that has been altered by humans.'], # 0 to 1684404  
   'dcntagri':['s_land_agri', 'Agricultural land area (square meters)', 'Agricultural land is used for farming. It includes fields, meadows, orchards and vineyards. '], # 0 to 4486113  
   'dcntnat':['s_land_nat', 'Natural land area (square meters)', 'Natural land is land that has not been altered. This includes, for example, forests. '], # 0 to 4894480 
-  'nb_garages':['n_garage','Number of garages reported in the property'], # 0 to 215
-  'nb_piscines':['n_pool','Number of pools reported in the property'], # 0 to 3 ## 3 and more ? 
-  'nb_terrasses':['n_terrace','Number of terraces reported in the property'], # 0 to 5 ## 5 and more ? 
-  'nb_greniers':['n_attic','Number of attics reported in the property'], # 0 to 13 ## 13 and more ? 
-  'nb_caves':['n_basmt','Number of basements reported in the property'], # 0 to 22 ## 22 and more ? 
+  'nb_garages/ffnbpgarag':['n_garage','Number of garages reported in the property'], # 0 to 215
+  'nb_piscines/ffnbppisci':['n_pool','Number of pools reported in the property'], # 0 to 3 ## 3 and more ? 
+  'nb_terrasses/ffnbpterra':['n_terrace','Number of terraces reported in the property'], # 0 to 5 ## 5 and more ? 
+  'nb_greniers/ffnbpaut':['n_attic','Number of attics reported in the property'], # 0 to 13 ## 13 and more ? 
+  'nb_caves/ffnbpaut':['n_basmt','Number of basements reported in the property'], # 0 to 22 ## 22 and more ? 
   'nb_autresdep':['n_otherannex','Number of other annexes reported in the property'],  # 0 to 91 ## 91 and more ? 
   'price_sqm':['price_sqm','Price per square meter of the transaction'],
   'dnivrel':['nth_floor_rel', 'Relative floor of the property (from 0, ground floor, to 1, last floor)']
  }
 
+col_label_fr = "Original label of the variable (French)"
 col_label = "Label of the variable"
 col_full_name = "Full name of the variable"
 col_expl = "Explanation and remarks"
 
 res = pd.DataFrame.from_dict(dict_fr_en, orient="index", columns=[col_label, col_full_name, col_expl]
-    ).reset_index(names='name_fr').sort_values(col_label).fillna('')
+    ).reset_index(names=col_label_fr).sort_values(col_label).fillna('')
 
 res[' '] = range(1, res.shape[0]+1)
 
 with open('table_dict.Qmd', 'w') as f: 
-    f.write(res[[" ", "name_fr", col_label, col_full_name, col_expl]].to_markdown(index=False))
+    f.write(res[[" ", col_label, col_full_name, col_expl, col_label_fr]].to_markdown(index=False))
 
 # %%
