@@ -21,14 +21,14 @@ So, RF rely on four key elements : building **aggregated regression or classific
 
 **You need to select several hyperparameters for training** (we cover the most important ones here) :
 
-- **Number of trees** : this hyperparameter must be tuned - too few trees lead to higher prediction error, while too many trees increase computational time;
-- **Number of randomly sampled candidate features** : use `sqrt` or `log2` to ensure the RF algorithm works well;
-- **Data sample rate** : useful to speed up training on large dataset, otherwise keep it close to `1.0`;
-- **Minimum number of observation per leaf** (terminal node) : setting a higher value can reduce training time, generally without any performance loss.
+-   **Number of trees** : this hyperparameter must be tuned - too few trees lead to higher prediction error, while too many trees increase computational time;
+-   **Number of randomly sampled candidate features** : use `sqrt` or `log2` to ensure the RF algorithm works well;
+-   **Data sample rate** : useful to speed up training on large dataset, otherwise keep it close to `1.0`;
+-   **Minimum number of observation per leaf** (terminal node) : setting a higher value can reduce training time, generally without any performance loss.
 
 For more information, you can read the paragraph on RF hyperparameters [here](https://inseefrlab.github.io/DT_methodes_ensemblistes/chapters/chapter3/2-guide_usage_RF.html#sec-hyperparam-rf)
 
-::: {.callout-tip collapse="false" icon="false"}
+:::: {.callout-tip collapse="false" icon="false"}
 ## <i class="bi bi-book"></i> Exercice 4: Train your first Random Forest model
 
 1.  Using the `RandomForestRegressor` class and its [scikit-learn documentation page](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestRegressor.html), define a basic model with the following hyperparameters :
@@ -39,23 +39,21 @@ For more information, you can read the paragraph on RF hyperparameters [here](ht
 
     -   min_samples_leaf=10
 
-    Train the model with the remaining non transformed target (it should take about 5 minutes to train). 
+    Train the model with the remaining non transformed target (it should take about 5 minutes to train).
 
-    As it's only a first step we chose to simplify the exercise. First, we will drop the `datemut` and `dteloc` features. Secondly, we will work with the **non transformed target** (i.e.price per square meter) and not use the transformed target (i.e. log of the price per square meter) defined at the end of the pre-processing. 
+    As it's only a first step we chose to simplify the exercise. First, we will drop the `datemut` and `dteloc` features. Secondly, we will work with the **non transformed target** (i.e.price per square meter) and not use the transformed target (i.e. log of the price per square meter) defined at the end of the pre-processing.
 
-    We will come back to this later on and chain it with the preprocessing steps. 
-
+    We will come back to this later on and chain it with the preprocessing steps.
 
     > **Note: All parameters of RandomForestRegressor have a default value - you only need to explicitly pass the ones you wish to override.**
 
-        <details>
+    <details>
 
-        <summary>Click to view a hint</summary>
+    <summary>Click to view a hint</summary>
 
-        Remember : in the [Preprocessing section](1-preprocessing.qmd), we created the training sets `X_train` and `y_train`.
+    Remember : in the [Preprocessing section](1-preprocessing.qmd), we created the training sets `X_train` and `y_train`.
 
-        </details>
-
+    </details>
 
 ```{python}
 #| code-fold: true
@@ -87,11 +85,9 @@ rf.fit(X_train, y_train)
 
 2.  Print the `Out-of-Bag` error *(the concept of OOB error will be covered in the next exercise)*.
 
-::: {.callout-important}
-Scikit-learn  distinguishes **parameters** from **fitted attributes**. Here, to access the attributes sent back by the training phase listed in the documentation, we need to search for the  `oob_score_ ` attributes of the random forest.
-
+::: callout-important
+Scikit-learn distinguishes **parameters** from **fitted attributes**. Here, to access the attributes sent back by the training phase listed in the documentation, we need to search for the `oob_score_` attributes of the random forest.
 :::
-
 
 ```{python}
 #| code-fold: true
@@ -101,7 +97,6 @@ Scikit-learn  distinguishes **parameters** from **fitted attributes**. Here, to 
 
 rf.oob_score_
 ```
-
 
 3.  Now, calculate the accuracy of the model on the test set - that is, how far off the prediction are from the actual values.
 
@@ -133,9 +128,9 @@ print(mean_squared_error(y_test, y_pred))
 ```
 
 Congrats 🥳! You have trained your first RF model. Now, try to find the best hyperparameters to minimize the final predicted error of the model.
-:::
+::::
 
-::: {.callout-tip collapse="false" icon="false"}
+:::::: {.callout-tip collapse="false" icon="false"}
 ## <i class="bi bi-book"></i> Exercice 5: Tuning a random forest's hyperparameters
 
 Now that you understand what a random forest is, we will tune its hyperparameters for training. In this exercise, your aim is to train the best model for the prediction of price per square meter.
@@ -154,13 +149,11 @@ We will implement a function to plot the OOB error as a function of the number o
 
 -   plot the OOB error for each RF model to visualize the convergence.
 
-
-::: {.callout-note}
-For convenience and pedagogical reasons, we are still working on a subset of the features and with the non transformed target. 
-In the real world, we would do this step with the pipeline defined at the end of the [pre-processing part](1-preprocessing.qmd).  
+::: callout-note
+For convenience and pedagogical reasons, we are still working on a subset of the features and with the non transformed target. In the real world, we would do this step with the pipeline defined at the end of the [pre-processing part](1-preprocessing.qmd).
 :::
 
-1.  Subsample a fraction ( `0.1` ) of the `df` dataset to reduce computation time and define X_sub and y_sub. To stick to the characteristics of the target, stratify the sampling to the target's distribution thanks to [pandas' `qcut` function](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.qcut.html#pandas.qcut). 
+1.  Subsample a fraction ( `0.1` ) of the `df` dataset to reduce computation time and define X_sub and y_sub. To stick to the characteristics of the target, stratify the sampling to the target's distribution thanks to [pandas' `qcut` function](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.qcut.html#pandas.qcut).
 
 ```{python}
 #| code-fold: true
@@ -180,37 +173,35 @@ X_sub = X_train.filter(items=y_sub.index, axis=0 )  # sampling X_train
 
 2.  Train multiple RF models with varying numbers of trees, using `warm_start=True` to avoid retraining all trees from scratch at each iteration. Keep the OOB error calculated in a list.
 
-
-
     <details>
 
     <summary>Click to view a hint</summary>
 
-        As a hint, you can go to the documentation page on OOB error [here](https://scikit-learn.org/stable/auto_examples/ensemble/plot_ensemble_oob.html). 
-        
-        If you need, here is the code to calculate and store the OOB score. 
-        
-        ```python
-        oob_scores = []
-        warnings.filterwarnings("ignore", message="Some inputs do not have OOB scores")
-        # filterwarnings remove some warnings messages
-        for n in range(min_estimators, max_estimators, 10):
-            rf.set_params(n_estimators=n)
-            rf.fit(X_sub, y_sub)
-            if metric == "r2":
-                oob_scores.append((n, 1 - rf.oob_score_))
-            elif metric == "neg_root_mean_squared_error":
-                mse = np.mean((y_sub - rf.oob_prediction_) ** 2)
-                oob_scores.append((n, np.sqrt(mse)))
-            else:
-                mae = np.mean(np.abs(y_sub - rf.oob_prediction_))
-                oob_scores.append((n, mae))
-        warnings.resetwarnings()
-        ```
+    ````         
+    As a hint, you can go to the documentation page on OOB error [here](https://scikit-learn.org/stable/auto_examples/ensemble/plot_ensemble_oob.html). 
+
+    If you need, here is the code to calculate and store the OOB score. 
+
+    ```python
+    oob_scores = []
+    warnings.filterwarnings("ignore", message="Some inputs do not have OOB scores")
+    # filterwarnings remove some warnings messages
+    for n in range(min_estimators, max_estimators, 10):
+        rf.set_params(n_estimators=n)
+        rf.fit(X_sub, y_sub)
+        if metric == "r2":
+            oob_scores.append((n, 1 - rf.oob_score_))
+        elif metric == "neg_root_mean_squared_error":
+            mse = np.mean((y_sub - rf.oob_prediction_) ** 2)
+            oob_scores.append((n, np.sqrt(mse)))
+        else:
+            mae = np.mean(np.abs(y_sub - rf.oob_prediction_))
+            oob_scores.append((n, mae))
+    warnings.resetwarnings()
+    ```
+    ````
 
     </details>
-
-
 
 ```{python}
 #| code-fold: true
@@ -444,20 +435,17 @@ grid_search.fit(X_train, y_train)
 print(grid_search.best_params_)
 ```
 
-::: {.callout-important}
-Scikit-learn  distinguishes **original parameters** from **fitted attributes with a trailing _**. The `_` suffix is a consistent scikit-learn convention: any attribute that only exists after fitting ends with `_` (e.g., `coef_`, `n_features_in_`, `classes_`). It signals "this was learned from data."
+::: callout-important
+Scikit-learn distinguishes **original parameters** from \*\*fitted attributes with a trailing \_\*\*. The `_` suffix is a consistent scikit-learn convention: any attribute that only exists after fitting ends with `_` (e.g., `coef_`, `n_features_in_`, `classes_`). It signals "this was learned from data."
 
-```python
+``` python
 grid_search.myfittedparam_  
 ```
-
 :::
 
 4.  From the fitted `grid_search` object, retrieve the best model. As it has only been trained on a fraction of the training set, retrain it on the full training set.
 
 > Note : Which type is `best_estimator_` attribute ?
-
-
 
 ```{python}
 #| code-fold: true
@@ -555,3 +543,4 @@ plt.show()
 
 Congrats 🎉! You have successfully trained, optimized, and evaluated a Random Forest model for price per square meter prediction.
 :::
+::::::
