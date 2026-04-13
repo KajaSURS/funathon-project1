@@ -98,7 +98,7 @@ Features with near-zero or negative permutation importance can safely be removed
 # 2 - Computing evaluation metrics
 
 ::: callout-tip
-## <i class="bi bi-book"></i> Exercice 8: Compute evaluation metrics
+## <i class="bi bi-book"></i> Exercice 10: Compute evaluation metrics
 
 In this exercise, you will generate predictions from the best RF and GB model and compute all four evaluation metrics on the test set.
 
@@ -197,7 +197,7 @@ print(f"MAPE GB: {mape_pct_gb:.2f} %")
 :::
 
 ::: callout-tip
-## <i class="bi bi-book"></i> Exercice 9: Generate diagnostic plots
+## <i class="bi bi-book"></i> Exercice 11: Generate diagnostic plots
 
 In this exercise, you will produce four diagnostic plots: a residuals distribution, a QQ-plot comparing actual and predicted quantiles, the target distribution and a feature importance plot. For each plot, take a moment to interpret what you observe.
 
