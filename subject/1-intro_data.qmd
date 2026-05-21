@@ -1,5 +1,5 @@
 ---
-title: "Detailled presentation of the data"
+title: "Detailed presentation of the data"
 lang: en-US
 format:
   html:
@@ -9,11 +9,45 @@ format:
 
 ---
 
+# Real estate transactions in France
+
+## How to buy a property in France ?
+
+A housing transaction is always formalized in front of a **notary** in France, who acts as a legal intermediary to ensure the transaction's validity and compliance with civil law. The notary checks among other things that the property effectively belongs to the seller, calculates and collects the **stamp duties** (such as *droits de mutation*) based on the transaction's details and the property's characteristics.
+
+After collecting these taxes, the notary sends the details of the transaction to the **tax administration**, including the sale price, the identities of the buyer and seller, the property's cadastral reference and the notarized document. The fiscal administration then records this information in its databases and updates the **land registry** to reflect the new ownership.
+
+## Specificity of the dataset
+
+Since 2019, the fiscal administration releases **all real estate transactions** twice a year in open data format on data.gouv.fr. You can access and download the original datasets (*Demande de Valeurs Foncières - DVF* or request for property values) directly here (in French only - sadly 😞): [data.gouv.fr/datasets/demandes-de-valeurs-foncieres](https://www.data.gouv.fr/datasets/demandes-de-valeurs-foncieres).
+
+**Types of transaction stored**:
+
+What transactions are described in the DVF dataset is a complex question. It's key to remember that the first goal of the dataset is to collect taxes. As a consequence, the dataset does not contain transactions that are exempted from stamp duties. In addition, some transactions are registered in the data when they are of little interest to us. For example:
+
+-   The DVF records _partial_ transactions, for example when a property is jointly owned by two people, and one of them buys back the share of the other. In this case, the recorded price is the price paid for the share, not the total value of the assets. Unfortunately, the DVF dataset does not specify what **share of ownership** is sold or whether the transaction is a partial one.
+-   The initial transfer of ownership from an individual to an SCI is recorded as a housing transaction, even if the SCI is owned by the very same persons.
+
+**Geographic coverage of the data** :
+
+The dataset includes **overseas territories** such as Guadeloupe, Martinique, and Réunion, but excludes **Alsace-Moselle** (the eastern departments of Bas-Rhin, Haut-Rhin, and Moselle). This exclusion is due to the **local civil law** (*droit local*), which applies in Alsace-Moselle because these territories were part of Germany from 1870 to 1918. It is not an issue as we will focus on the Paris region but keep this in mind if you want to play around with the data.
+
+**Geographical codes** :
+
+The French territory is split in 101 administrative regions called _départements_. Each _département_ is identified with a unique non numeric **department code**, such as *75* for Paris or *2A* for southern Corsica.
+
+The **official geographic code** — commonly referred to as the **Insee code** — is a unique five-digit identifier assigned by the National Institute of Statistics and Economic Studies ([Insee](https://www.insee.fr/en/metadonnees/source/serie/s2084)) to each city, department, region and other administrative area. This code allows to uniquely identify a city (or equivalent) and remains constant even if the city's name changes or if it merges with another municipality. The two first digits of the city's Insee code is the department code. You can find the full COG data and documentation here: [Insee - Code Officiel Géographique (COG)](https://www.insee.fr/fr/information/2560452) and in open data format here: [data.gouv.fr - Code Officiel Géographique (COG)](https://www.data.gouv.fr/datasets/code-officiel-geographique-cog).
+
+In everyday life, the zip code is more frequent to Insee code. It means that if you search for a city with its Insee code on Google Maps for example, it won't find it as it uses the **zip code** (or postal code). The zip code is not a reliable identifier for a city as multiple cities share the same zip code, and a single city may have several zip codes depending on its districts or neighborhoods.
+
+For example, the city of Paris is identified by the department code **75**, the Insee code **75056** (Paris itself), and is associated with multiple zip codes (e.g., **75001**, **75002**, etc.). Montrouge's Insee code is 92049 and 92 is the department code of Hauts-de-Seine, where Montrouge is located.
+
+In-depth details about the data is presented in the [dedicated page](intro_data.qmd).
 
 # General presentation of the data
 
-Data prepared for this project gathers all of the housing transactions in France between 2014 and 2021 and details about the property sold.
-Because the characteristics of the property sold isn't open source, the data you'll be working with are **synthetic data**. It has been generated to mirror the original data.
+Data prepared for this project gathers all of the housing transactions in France between 2014 and 2024 and details about the property sold.
+Because the characteristics of the property sold isn't open source, the data you'll be working with is **synthetic data**. It has been generated to mirror the original data.
 
 If you want to have a closer look at the data, CEREMA publishes on [its website](%5D(https://doc-datafoncier.cerema.fr/doc/ff/pb0010_local)) an extensive documentation of the different datasets, the variables, their modalities and the overall quality of variable.
 
@@ -22,7 +56,7 @@ If you want to have a closer look at the data, CEREMA publishes on [its website]
 |     | Label of the variable   | Full name of the variable      | Explanation and remarks       | Original label of the variable (French)   |
 |--:|:---------|:---------------------------------|:------------------------------------------------------------------|:-------------|
 |   1 | dist_tosea              | Distance of the property to the nearest seashore - capped at 10km                       | This variable has been calculated      | distance_ltm (calculated)                 |
-|   2 | farea                   | Reported floor area of the property                         |                           | dsupdc        |
+|   2 | farea                   | Floor area of the property                         |                           | dsupdc        |
 |   3 | has_cheating            | If the property has access to central heating               | The modalities are coded in the following way : <br> - `0` : `No` <br> - `1` : `Missing value` <br> - `2` : `Yes`                       | gchclc        |
 |   4 | has_elec                | If the property has access to electricity                   | The modalities are coded in the following way : <br> - `0` : `No` <br> - `1` : `Missing value` <br> - `2` : `Yes`                       | gelelc        |
 |   5 | has_elevator            | If the building of the flat has an elevator (for flats only)| The modalities are coded in the following way : <br> - `0` : `No` <br> - `1` : `Missing value` <br> - `2` : `Yes`                       | gasclc        |
@@ -68,7 +102,7 @@ If you want to have a closer look at the data, CEREMA publishes on [its website]
 
 See [CEREMA's documentation (in French)](https://doc-datafoncier.cerema.fr/doc/ff/pb0010_local) for a more detailled description.
 
-# Detailled note 
+# Detailed note 
 
 Note that the variable year of the building has been harmonized to correct for typing mistakes. Here are the transformation made from the original data :
 

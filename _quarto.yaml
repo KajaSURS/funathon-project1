@@ -30,25 +30,23 @@ website:
 
     left:
       - text: "0. Introduction"
-        menu: 
-        - text: "Presentation"
-          href: subject/introduction.qmd
-        - text: "Data presentation"
-          href: subject/intro_data.qmd
-      - text: "1. Preprocessing"
-        href: subject/1-preprocessing.qmd
-      - text: "2. Modelling"
+        href: subject/introduction.qmd
+      - text: "1. Data presentation"
+        href: subject/1-intro_data.qmd
+      - text: "2. Preprocessing"
+        href: subject/2-preprocessing.qmd
+      - text: "3. Modelling"
         menu:
         - text: "with a random forest"
-          href: subject/2-RF_model.qmd
+          href: subject/3-RF_model.qmd
         - text: "with a gradient boosting"
-          href: subject/2-GB_model.qmd
-      - text: "3. Model evaluation"
-        href: subject/3-metrics.qmd
-      - text: "4. Model logging"
-        href: subject/4-logging.qmd
-      - text: "5. Deployment"
-        href: subject/5-deployment.qmd
+          href: subject/3-GB_model.qmd
+      - text: "4. Model evaluation"
+        href: subject/4-metrics.qmd
+      - text: "5. Model logging"
+        href: subject/5-logging.qmd
+      - text: "6. Deployment"
+        href: subject/6-deployment.qmd
 
 
 format:

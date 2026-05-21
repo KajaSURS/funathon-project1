@@ -36,7 +36,7 @@ editor_options:
     </tr>
     <tr>
       <td><span class="level-button level-expert">Expert</span></td>
-      <td>Enhance the pipeline and improve results: better-tuned hyperparameters, implementation of additional models (e.g. LightGBM, XGBoost, Crospint), and the development of a UI with an interactive map for price predictions, etc...
+      <td>Enhance the pipeline and improve results: better-tuned hyperparameters, implementation of additional models (e.g. LightGBM, XGBoost, crospint), and the development of a UI with an interactive map for price predictions, etc...
       </td>
     </tr>
   </tbody>
@@ -45,18 +45,17 @@ editor_options:
 
 # Introduction
 
-The project focuses on **predicting housing prices in the Paris area** (Île-de-France region). We will explore how to perform inference using only a limited number of data sources, specifically transaction records and cadastral data. The reason for this choice is that data sources are widely available across many countries. At the end of this project, you will be able to :
+The project focuses on **predicting housing prices in the Paris area** (Île-de-France region). We will explore how to perform inference using only a limited number of data sources, specifically real estate transactions and cadastral data. The reason for this choice is that data sources are widely available across many countries. At the end of this project, you will be able to :
 
 -   prepare your **training data**;
 -   train common **machine learning (ML) models**;
 -   evaluate your models by choosing the most suited **metrics**;
 -   use some tools to ensure the **reproductibility of the process** (monitoring the model, deploy an API).
 
-# Structure of the project
+# Project structure
 
-This project includes five steps (listed in the banner at the top of the page):
+This project includes four steps (listed in the banner at the top of the page):
 
--   data generation : how to generate synthetic data from confidential data - this step can be skipped;
 -   data preprocessing : how to prepare data input for the training of ML models;
 -   model fitting and evaluation with two different models : Random Forest (RF) and Gradient Boosting (GB);
 -   model logging with MLflow;
@@ -71,44 +70,7 @@ To run it, just run `uv run solution/main.py` and it will execute all the steps 
 
 To run the final API, run `uvicorn solution.app:app --reload`. 
 
-# Generalities about housing market in France
-
-## How to buy a property in France ?
-
-A housing transaction is always formalized in front of a **notary** in France, who acts as a legal intermediary to ensure the transaction’s validity and compliance with civil law. The notary checks among other things that the property effectively belongs to the seller, calculates and collects the **stamp duties** (such as *droits de mutation*) based on the transaction’s details and the property’s characteristics.
-
-After collecting these taxes, the notary forwards the details of the transaction to the **fiscal administration**, including the sale price, the identities of the buyer and seller, the property’s cadastral reference and the notarized document. The fiscal administration then records this information in its databases and updates the **land registry** to reflect the new ownership.
-
-## Specificity of the data set
-
-Since 2019, the fiscal administration publishes **all real estate transactions** twice a year in open data format on data.gouv.fr. You can access and download the original datasets (*Demande de Valeurs Foncières - DVF* or request for property values) directly here (in French only - sadly 😞): [data.gouv.fr/datasets/demandes-de-valeurs-foncieres](https://www.data.gouv.fr/datasets/demandes-de-valeurs-foncieres).
-
-**Types of transaction stored**:
-
-What transaction is stored in the DVF dataset is a vast question. It's key to remember that the first goal of the dataset is to collect taxes. The dataset therefore is not fully complete and does not contain all the housing transactions in France that we would be interested in (the dataset remains of very high value and one of the most complete source of transaction as of today). For example, transactions involving selling shares of a **real estate investment company** (or *Sociétés Civiles Immobilières (SCIs)*) are excluded from housing transaction data, as they are not considered housing transactions from a legal perspective. However, in the way these companies are used, transfering the ownership of a SCI is very similar to buying a property.
-
-In addition, some transactions are registered in the data when they are of little interest to us. For example:
-
--   The DVF records partial transaction, that is for example when a property is jointly owned and one of the owner sells its part to his/her brothers or sisters. The DVF dataset does not specify the **share of ownership transferred**, as only the total sale price is recorded ;
--   The initial transfer of ownership from an individual to an SCI is recorded as a housing transaction, even if the SCI is usually owned by the same persons.
-
-**Geographic coverage of the data** :
-
-The dataset includes **overseas territories** such as Guadeloupe, Martinique, and Réunion, but excludes **Alsace-Moselle** (the departments of Bas-Rhin, Haut-Rhin, and Moselle). This exclusion is due to the **local civil law** (*droit local*), which applies in Alsace-Moselle because these territories were part of Germany from 1870 to 1918. It is not an issue as we will focus on the Paris region but keep this in mind if you want to play around with the data.
-
-**Geographical codes** :
-
-The French territory is split in 18 regions (excluding the special case of overseas collectivities). Each region is made of departments (101 departments nationwide). Each department is identified with a unique non numeric **department code**, such as *75* for Paris or *2A* for southern Corsica.
-
-The **official geographic code** — commonly referred to as the **Insee code** — is a unique five-digit identifier assigned by the National Institute of Statistics and Economic Studies ([Insee](https://www.insee.fr/en/metadonnees/source/serie/s2084)) to each city, department, region and other administrative area. This code allows to uniquely identify a city (or equivalent) and remains constant even if the city’s name changes or if it merges with another municipality. The two first digits of the city's Insee code is the department code. You can find the full COG data and documentation here: [Insee - Code Officiel Géographique (COG)](https://www.insee.fr/fr/information/2560452) and in open data format here: [data.gouv.fr - Code Officiel Géographique (COG)](https://www.data.gouv.fr/datasets/code-officiel-geographique-cog).
-
-In everyday life, the zip code is more frequent to Insee code. It means that if you search for a city with its Insee code on Google maps for example, Google maps won't find it as it uses the **zip code** (or postal code). The zip code is not a reliable identifier for a city as multiple cities share the same zip code, and a single city may have several zip codes depending on its districts or neighborhoods.
-
-For example, the city of Paris is identified by the department code **75**, the Insee code **75056** (Paris itself), and is associated with multiple zip codes (e.g., **75001**, **75002**, etc.). Montrouge's Insee code is 92049 and 92 is the department code of Hauts-de-Seine, where Montrouge is located.
-
-In-depth details about the data is presented in the [dedicated page](intro_data.qmd).
-
-# Initialization of the project
+# Project initialization
 
 ## Technical requirements
 
@@ -193,7 +155,7 @@ onyxia@vscode-python-882151-0:~/work$
 
 After installing dependencies with `uv`, you need to configure the Python interpreter so that the installed packages are properly recognized. This will allow you to run Python scripts in parts, similar to working in a Jupyter notebook.
 
-To do this, open the command palette `Show and Run commands` then select **`Python: select interpreter`** , or press `Ctrl+Shift+P`. Finally, enter the following path, which corresponds to the Python interpreter generated by `uv` :
+To do this, open the command palette `Show and Run commands` or press `Ctrl+Shift+P`, then select **`Python: select interpreter`**, then click on `Enter interpreter path`. Finally, enter the following path, which corresponds to the Python interpreter generated by `uv`:
 
 ```{.bash}
 /home/onyxia/work/funathon-project1/.venv/bin/python3.13

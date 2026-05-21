@@ -7,7 +7,7 @@ format:
     number-sections: true
 ---
 
-In this section, we will prepare the data to be used for training our machine learning model. Pre-processing involves a lot of steps and many go between the models, the data and the pre-processing. It also involves to have a very close look at the data to understand it before feeding it into a model. It is therefore quite normal for **pre-processing to take time**.
+In this section, we will prepare the data to be used for training our machine learning model. Pre-processing involves a lot of steps and many go between the models, the data and the pre-processing. It also requires to have a very close look at the data to understand it before feeding it into a model. So keep in mind: **pre-processing takes time**, but it is really useful to get high-quality models.
 
 Pre-processing is built on `pandas` and on scikit-learn's pipeline structures. If you want more information, don't hesitate to go to [pandas documentation](https://pandas.pydata.org/pandas-docs/stable/reference/index.html) and follow one of the very good online [MOOC made by scikit-learn](https://inria.github.io/scikit-learn-mooc/) to understand the package and its way of working.
 
@@ -30,11 +30,13 @@ You have to load the file `2026/project1/data/1_input/transactions_EN.parquet` f
 
 The aim of this part is to manipulate new database and understand features in order to prepare the preprocessing steps: it's an important step in ML pipeline.
 
-1.  **Initialiaze a DuckDB connection.**
+1.  **Initialize a DuckDB connection.**
+
+To do so, you need to import the `duckdb` library and then open an in-memory connection.
 
     ::: {.callout-tip collapse="true" title="Hint"}
 
-    First, you need to open a connection in the memory. Second, you need to create a secret table with S3 credentials
+    You can have a look at the [official `duckdb` documentation](https://duckdb.org/docs/current/clients/python/overview#using-an-in-memory-database).
 
     :::
 
@@ -48,24 +50,6 @@ The aim of this part is to manipulate new database and understand features in or
 
     # Create a non-persistent connection (the database exists only while the connection is alive and disappears when it is closed)
     con = duckdb.connect(database=":memory:")
-
-    # You need to create a secret table with all the S3 credentials
-    con.execute(
-        f"""
-        CREATE SECRET secret_s3 (
-        TYPE S3,
-        KEY_ID '{os.environ["AWS_ACCESS_KEY_ID"]}',
-        SECRET '{os.environ["AWS_SECRET_ACCESS_KEY"]}',
-        ENDPOINT '{os.environ["AWS_S3_ENDPOINT"]}',
-        SESSION_TOKEN '{os.environ["AWS_SESSION_TOKEN"]}',
-        REGION 'eu-west-1',
-        URL_STYLE 'path',
-        SCOPE 's3://projet-funathon/'
-        );
-        """
-    )
-
-    RANDOM_STATE = 202605
     ```
 
 2.  **Load, with DuckDB, all data inputs in a DataFrame `trans`** (for transactions).
@@ -85,7 +69,7 @@ trans = con.sql(
 ```
 
 ::: {.callout-note title="Another way to load the data"}
-DuckDB is not the only tool you can use to read from the data. You can also use pandas' built-in `read_parquet` function for example.
+DuckDB is not the only tool you can use to read the data. You can also use pandas' built-in `read_parquet` function for example.
 
 ``` python
 #| code-fold: true
@@ -122,7 +106,7 @@ df.notnull().all() # column with no NaN?
 
 ::: {.callout-tip collapse="true" title="Hint"}
 
-You need to filter with the feature `prop_loc_dep`, with the following department codes for Paris area : ["75", "77", "78", "91", "92", "93", "94", "95"]
+You need to filter with the feature `prop_loc_dep`, with the following department codes for Paris area : ['75', '77', '78', '91', '92', '93', '94', '95']
 
 :::
 
@@ -136,7 +120,7 @@ trans = trans[trans["prop_loc_dep"].isin(["75", "77", "78", "91", "92", "93", "9
 ```
 
 
-# Which transformations must you apply to the data ?
+# What transformations should be applied to the data ?
 
 ## Exercice 2: Analyzing data inputs
 
@@ -146,11 +130,11 @@ We will transform a few features for the training part. It will enhance the qual
 
 1.  **Create the final target**
 
-    You need to consider what the target prediction should be. In the case of housing prices, should it be the total property price or the price per square meter? In the project, the target is **normalized** to represent the **price per square meter**, for the following reasons :
+    The first question to ask is: what should the prediction target be? In the case of housing prices, it can be the total property price or the price per square meter. In the project, the target is **normalized** to represent the **price per square meter**, for the following reasons :
 
-    -   all observations have the same importance with this target : predicting price per square meter prevents size from monopolizing the variance-reduction criterion at each split, freeing the tree to capture more informative features ;
-    -   when size is no longer the dominant source of variance in the target, splits are driven by economivally meaningful features rather than a mechanical size effect ;
-    -   Feature importance scores are less distorted when size no longer absorbs a disproportionate share of variance reduction across splits ;
+    -   floor area is obviously very important when predicting housing prices, and prices are approximately proportional to floor area (all other things being equal). Using prices per square meter instead of prices will help the models to focus on other informative features ;
+    -   when size is no longer the dominant source of variance in the target, splits are driven by economically meaningful features rather than a mechanical size effect ;
+    -   Feature importance scores are less distorted when size no longer absorbs a disproportionate share of variance reduction across splits.
 
     ::: {.callout-tip collapse="true" title="Hint"}
 
@@ -166,17 +150,25 @@ We will transform a few features for the training part. It will enhance the qual
     trans["price_sqm"] = trans["price"] / trans["farea"]
     ```
 
-2.  **Check if the target must be transformed by plots**
+2.  **Check if the target must be transformed**
 
-    For better prediction quality, you need to have a look at the distribution of your target variable and check whether it is symmetric. If the distribution is not symmetric, the prediction may be less accurate for certain range of values :
+    For better prediction quality, you need to have a look at the distribution of your target variable and check whether it is roughly normal and approximately symmetric. If the distribution is not roughly normal or if it has a lot of extreme values, the prediction may be less accurate for certain ranges of values, and some extreme values will have too much influence on the final model.
 
-    -   lower values when the distribution is right-skewed ;
-    -   higher values when the distribution is left-skewed ;
+::: {.callout-note title="Another way to load the data"}
 
-    The reason differs depending on the model used :
+    The reason why extreme values are detrimental to model quality differs depending on the model used :
 
     -   For Random Forest (random forests), the final prediction is the mean value of Y across all observations contained in the leaf. Since the mean is not a robust statistic, extreme values can strongly influence the final prediction associated with that leaf.
     -   For Gradient Boosting (gradient boosting), extreme values can lead to overfitting. Since gradient boosting iteratively reduces residuals by adding new trees, observations with very large residuals - often caused by extreme values - can have a disproportionate influence on the model.
+:::
+
+    The best way to look at the distribution of the target is to plot it. So: plot the price per square meter and the logarithm of price per square meter. If you want, you can remove extreme values before plotting. Look at the plots, and answer this question: what distribution looks closer to the normal one? Is it necessary to transform `y`?
+ 
+::: {.callout-tip collapse="true" title="Hint"}
+
+You can use `matplotlib` to make the plots, and the `percentile` function of `numpy` to define thresholds for oulier removal.
+
+:::
 
     ```{python}
     #| code-fold: true
@@ -201,11 +193,7 @@ We will transform a few features for the training part. It will enhance the qual
     plt.show()
     ```
 
-    In this case, you can see the difference between `Y` and `log(Y)` distribution : it is more symmetric with `log(Y)` distribution.
-
-    Moreover, prices distribution is usually right skewed as they are more often positive, and **prices usually present extreme values that logarithm will soften**.
-
-    We will therefore apply a log transformation to the target variable when constructing the train pipeline.
+    In this case, you can see the difference between `Y` and `log(Y)` distribution : it is much closer to normal with the log transformation. Moreover, prices distribution is usually right skewed as they are more often positive, and **prices usually present extreme values that logarithm will soften**. We will therefore apply a log transformation to the target variable when constructing the training pipeline.
 
 3.  **Handle outlier or erroneous values in the target variable**
 
@@ -219,9 +207,9 @@ We will transform a few features for the training part. It will enhance the qual
 
     If you want to focus your study on tails phenomena, the way you deal with this issue will be very important because you want to disentangle the richness of the extreme data from bad data. If you're more focused on predicting the median price, the risk associated with cleaning too abruptly extreme phenomena is smaller.
 
-    In our case, one of the flaw of the data is for example partial selling (when somebody sells only a fraction of the property - leading to price per square meter too low) and error mistakes in the data (if the property for example has been renovated and extended and the reported floor area hasn't been updated - leading to a too high price per square meter). No expert knowledge can give a threshold above which a price is for sure too high.
+    In our case, one of the problems of the data is partial transactions (when somebody sells only a fraction of the property - leading to price per square meter that are way too low) and clear mistakes in the data (prices can sometimes be in cents instead of euros - leading to prices per square meter that are 100 times too high). No expert knowledge can give a threshold above which a price is for sure too low or too high.
 
-    We will therefore apply first a deterministic method. For example, we can set a threshold when analyzing housing price distribution (see previous plots and the describe methode). If the price per square meter of the transaction exceeds €200.000 for example, the value can be considered erroneous.
+    We will therefore apply first a simple deterministic method. For example, we can set a threshold when analyzing housing price distribution (see previous plots and the describe methode). If the price per square meter of the transaction exceeds €200.000 for example, the value can be considered erroneous.
 
     In the same way, we can have a look at the lower dristribution to see if there is an issue with the left part of the distribution.
 
