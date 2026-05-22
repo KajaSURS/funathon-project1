@@ -118,13 +118,13 @@ model = TransformedTargetRegressor(
 
 :::
 
-1. Load the train and test datasets.
+1. **Load the train and test datasets.** For convience and for a start, drop categorical and date feature `prop_type` and `trans_date`. 
 
-    ::: {.callout-tip collapse="true" title="Hint"}
+::: {.callout-tip collapse="true" title="Hint"}
 
-    Remember : in the [Preprocessing section](2-preprocessing.qmd), we created the training sets `X_train` and `y_train`.
+Remember : in the [Preprocessing section](2-preprocessing.qmd), we created the training sets `X_train` and `y_train`.
 
-    :::
+:::
 
 ```{python}
 #| code-fold: true
@@ -144,7 +144,7 @@ y_test  = pd.read_parquet('s3://projet-funathon/2026/project1/data/2_preprocessi
 ```
 
 
-2.  Using the `RandomForestRegressor` class from the `scikit-learn` package and its [documentation](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestRegressor.html), define a basic model with the following hyperparameters:
+2.  Using the `RandomForestRegressor` class from the `scikit-learn` package and its [documentation](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestRegressor.html), **define a basic model with the following hyperparameters:**
 
     -   `n_estimators=50`
     -   `max_features="sqrt"`
@@ -175,7 +175,7 @@ rf = RandomForestRegressor(
 
 3.  You will now train the model. Since it is your very first model, we simplify things in two ways. First, we will drop the `trans_date` and `prop_type` features. Second, we will work with the **non transformed target** (i.e. price/sqm) rather than the transformed target (i.e. log price/sqm) defined at the end of the pre-processing. We will come back to these two points later.
 
-Train the model with the non-transformed target using the training data (NOT the test data). It should take a few minutes to train.
+**Train the model with the non-transformed target using the training data (NOT the test data)**. It should take a few minutes to train.
 
 ```{python}
 #| code-fold: true
@@ -203,15 +203,15 @@ print(f"OOB Score : {rf.oob_score_}")
 
 ```
 
-5.  Now, calculate the mean squared error of the model on the test set - that is, how far off the prediction are from the actual values.
+5.  Now, **calculate the mean squared error of the model on the test set** - that is, how far off the prediction are from the actual values.
 
-    Note that this is just an illustration of the evaluation process. More details on metrics will be covered in the [dedicated section](3-metrics.qmd).
+    Note that this is just an illustration of the evaluation process. More details on metrics will be covered in the [dedicated section](4-metrics.qmd).
 
-    ::: {.callout-tip collapse="true" title="Hint"}
+::: {.callout-tip collapse="true" title="Hint"}
 
-    You will need to use the predict method of the model (see the [documentation]()). You can use the `mean_squared_error` function from the `sklearn.metrics` module. Remember to use the __test set__ for the evaluation, NOT the training set.
+You will need to use the predict method of the model (see the [documentation](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestRegressor.html#sklearn.ensemble.RandomForestRegressor.predict)). You can use the `mean_squared_error` function from the `sklearn.metrics` module. Remember to use the __test set__ for the evaluation, NOT the training set.
 
-    :::
+:::
 
 ```{python}
 #| code-fold: true
@@ -248,10 +248,10 @@ In this exercise, will now implement a function to plot the OOB error as a funct
 -   plot the OOB error for each RF model to visualize the convergence.
 
 ::: callout-note
-For convenience and pedagogical reasons, we are still working on a subset of the features and with the non transformed target. In the real world, we would do this step with the pipeline defined at the end of the [pre-processing part](1-preprocessing.qmd).
+For convenience and pedagogical reasons, we are still working on a subset of the features and with the non transformed target. In the real world, we would do this step with the pipeline defined at the end of the [pre-processing part](2-preprocessing.qmd).
 :::
 
-1.  Subsample a fraction ( `0.1` ) of the `df` dataset to reduce computation time and define X_sub and y_sub. To stick to the characteristics of the target, stratify the sampling to the target's distribution thanks to [pandas' `qcut` function](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.qcut.html#pandas.qcut).
+1.  **Subsample a fraction ( `0.1` ) of the `df` dataset to reduce computation time and define X_sub and y_sub.** To stick to the characteristics of the target, stratify the sampling to the target's distribution thanks to [pandas' `qcut` function](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.qcut.html#pandas.qcut).
 
 ```{python}
 #| code-fold: true
@@ -269,7 +269,7 @@ X_sub = X_train.filter(items=y_sub.index, axis=0 )  # sampling X_train
 
 ```
 
-2.  Train multiple RF models with varying numbers of trees, using `warm_start=True` to avoid retraining all trees from scratch at each iteration. Keep the OOB error calculated in a list.
+2.  **Train multiple RF models with varying numbers of trees**, using `warm_start=True` to avoid retraining all trees from scratch at each iteration. Keep the OOB error calculated in a list.
 
     ::: {.callout-tip collapse="true" title="Hint"}
     As a hint, you can go to the documentation page on OOB error [here](https://scikit-learn.org/stable/auto_examples/ensemble/plot_ensemble_oob.html).
@@ -308,8 +308,8 @@ X_sub = X_train.filter(items=y_sub.index, axis=0 )  # sampling X_train
 import warnings
 
 metric = "r2"
-min_estimators=5
-max_estimators=150
+min_estimators = 5
+max_estimators = 150
 
 rf = RandomForestRegressor(
     warm_start=True,
@@ -333,7 +333,7 @@ for n in range(min_estimators, max_estimators, 20):
 warnings.resetwarnings()
 ```
 
-3.  (*Optional*) Using the *Out-of-Bag (OOB) error*, try to plot the convergence of the OOB error as a function of the number of trees.
+3.  (*Optional*) Using the *Out-of-Bag (OOB) error*, **plot the convergence of the OOB error as a function `rf_error_oob_plot` of the number of trees**.
 
     ::: {.callout-tip collapse="true" title="Hint"}
 
@@ -424,7 +424,7 @@ def rf_error_oob_plot(X_train,
 
 ```
 
-You can select the number of trees (`n_estimators`) now, with the OOB error plot. Which number do you choose ?
+You can select the number of trees (`n_estimators`) now, with the OOB error plot. **Which number do you choose ?**
 
 ```{python}
 #| code-fold: true
@@ -446,7 +446,7 @@ oob_error_ntrees
 
 Note that in the Preprocessing section, you saw how to build a Pipeline. In this exercise, we will use a Pipeline again. The first exercise didn't use it to let you practice scikit-learn tools documented [here](https://scikit-learn.org/stable/modules/compose.html#pipelines-and-composite-estimators).
 
-0.  For convenience, we dropped the features `prop_type`, `dtemut` and trained our model on absolute prices and not on the transformed ones. Get them back and define the new training and testing datasets `X_train, X_test, y_train, y_test`.
+0.  For convenience, we dropped the features `prop_type`, `trans_date` and trained our model on absolute prices and not on the transformed ones. **Get them back and define the new training and testing datasets `X_train, X_test, y_train, y_test`**.
 
 ```{python}
 #| code-fold: true
@@ -462,7 +462,7 @@ y_test  = pd.read_parquet("https://minio.lab.sspcloud.fr/projet-funathon/2026/pr
 
 ```
 
-1.  Create a dictionary with the 3 hyperparameters to test (`n_estimators`, `max_features` and `min_samples_leaf`) for training.
+1.  **Create a dictionary with the 3 hyperparameters to test** (`n_estimators`, `max_features` and `min_samples_leaf`) for training.
 
     ::: {.callout-tip collapse="true" title="Hint"}
 
@@ -490,7 +490,7 @@ param_grid = {
 }
 ```
 
-2.  Using the [Grid Search documentation](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html), write the code to set up and run cross-validated hyperparameter tuning for the RF model. Note that training the model should last around 10 minutes.
+2.  Using the [Grid Search documentation](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html), **set up and run cross-validated hyperparameter tuning for the RF model**. Note that training the model should last around 10 minutes. You can sample the dataset if you want to have a faster training. 
 
 ```{python}
 #| code-fold: true
@@ -532,7 +532,7 @@ grid_search.myfittedparam_
 ```
 :::
 
-4.  From the fitted `grid_search` object, retrieve the best model. As it has only been trained on a fraction of the training set, retrain it on the full training set. Which type is `best_estimator_` attribute ?
+4.  From the fitted `grid_search` object, **retrieve the best model**. As it has only been trained on a fraction of the training set, retrain it on the full training set. Which type is `best_estimator_` attribute ?
 
 ```{python}
 #| code-fold: true
@@ -584,7 +584,7 @@ Several metrics are commonly used to evaluate regression models:
 -   **MAE** (Mean Absolute Error): measures the average absolute difference between predictions and actual values, more robust to outliers;
 -   **R²** (Coefficient of Determination): measures the proportion of variance in the target explained by the model (1 = perfect fit, 0 = no better than the mean).
 
-1.  Compute predictions on the test set using the best model retrieved from the previous exercise.
+1.  **Compute predictions on the test set using the best model retrieved from the previous exercise**.
 
 ```{python}
 #| code-fold: true
@@ -620,7 +620,7 @@ print(f"Test - MAE  : {mae:.2f}")
 print(f"Test - R²   : {r2:.4f}")
 ```
 
-3.  (Optional) Plot predicted values against actual values to visually assess model quality. A well-calibrated model should have points closely aligned along the diagonal.
+3.  (Optional) **Plot predicted values against actual values to visually assess model quality**. A well-calibrated model should have points closely aligned along the diagonal.
 
 ::: {.callout-tip collapse="true" title="Hint"}
 
@@ -802,6 +802,6 @@ Congrats 🎉! In this section, you have successfully
 - optimized the `RandomForestRegressor` parameters through a gridsearch and cross-validation,
 - and finally, evaluated a random Forest model for price per square meter predictions with the RMSE and MAE metrics.
 
-You can now have a look at the [gradient boosting model](2-GB_model.qmd).
-Once you have trained both model, you can have a closer look at metrics with the [metrics section](3-metrics.qmd).  
+You can now have a look at the [gradient boosting model](3-GB_model.qmd).
+Once you have trained both model, you can have a closer look at metrics with the [metrics section](4-metrics.qmd).  
 

@@ -9,7 +9,7 @@ format:
 
 Now that we have trained and evaluated a Random Forest model, we will train a **Gradient Boosting** model on the same data. We will cover the theoretical background, train a baseline model, understand the key hyperparameters, and tune them following a simple validation procedure.
 
-A methodological guide on ensemble methods by Insee is available [here](https://inseefrlab-github-io.translate.goog/DT_methodes_ensemblistes/chapters/chapter2/3-random_forest.html?_x_tr_sl=fr&_x_tr_tl=en&_x_tr_hl=en&_x_tr_pto=wapp). If you are unfamiliar with gradient boosting, we recommend reading it before proceeding.
+A methodological guide on ensemble methods by Insee is available [here](https://inseefrlab-github-io.translate.goog/DT_methodes_ensemblistes/chapters/chapter2/4-boosting.html?_x_tr_sl=fr&_x_tr_tl=en&_x_tr_hl=en&_x_tr_pto=wapp). If you are unfamiliar with gradient boosting, we recommend reading it before proceeding.
 
 # Concepts of Gradient Boosting
 
@@ -129,7 +129,7 @@ def predicted_actual_plot(y_test, y_pred_test, model_name):
 ## Exercice 7: Train your first Gradient Boosting model
 
 1.  Using the `HistGradientBoostingRegressor` class and its [scikit-learn documentation page](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.HistGradientBoostingRegressor.html), define and train a baseline model with **default hyperparameters**. 
-For convenience, load the training and testing datasets `X_train, X_test, y_train, y_test` that were already defined at the end of the [pre-processing section](1-preprocessing.qmd).
+For convenience, load the training and testing datasets `X_train, X_test, y_train, y_test` that were already defined at the end of the [pre-processing section](2-preprocessing.qmd).
 Drop the features `prop_type`, `trans_date` from `X_train` and `X_test`. 
 It will simplify the scikit learn code - in real life you wouldn't drop these features and that's what we'll do later on.
 
@@ -644,7 +644,7 @@ for split, X, y in list:
     print_metrics(gb_model_final, split, X, y)
 ```
 
-2.  Plot predicted values against actual values on the test set using the function `predicted_actual_plot` we defined in the section on [random forest](2-RF_model.qmd).
+2.  Plot predicted values against actual values on the test set using the function `predicted_actual_plot` we defined in the section on [random forest](3-RF_model.qmd).
 
 ```{python}
 #| code-fold: true
@@ -801,5 +801,5 @@ Congrats 🎉! In this section, you have successfully
 - optimized the `HistGradientBoostingRegressor` parameters through a gridsearch,
 - and finally, evaluated the best gradient boosting model for price per square meter predictions with the RMSE and MAE metrics.
 
-You can now have a look at how to train a [random forest model](2-RF_model.qmd).
-Once you have trained both model, you can have a closer look at metrics with the [metrics section](3-metrics.qmd).
+You can now have a look at how to train a [random forest model](3-RF_model.qmd).
+Once you have trained both model, you can have a closer look at metrics with the [metrics section](4-metrics.qmd).

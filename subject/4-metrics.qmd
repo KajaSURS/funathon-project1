@@ -493,4 +493,4 @@ Congrats 🎉! In this section, you have a complete evaluation pipeline:
 - feature importance, 
 - and a head-to-head model comparison. 
 
-These steps form the foundations of any rigorous model validation workflow, well done ! You can now have a look at [how to log a model](4-logging.qmd) to avoid being lost between different models and having to train again a model. 
+These steps form the foundations of any rigorous model validation workflow, well done ! You can now have a look at [how to log a model](5-logging.qmd) to avoid being lost between different models and having to train again a model. 

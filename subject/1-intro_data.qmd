@@ -42,7 +42,7 @@ In everyday life, the zip code is more frequent to Insee code. It means that if 
 
 For example, the city of Paris is identified by the department code **75**, the Insee code **75056** (Paris itself), and is associated with multiple zip codes (e.g., **75001**, **75002**, etc.). Montrouge's Insee code is 92049 and 92 is the department code of Hauts-de-Seine, where Montrouge is located.
 
-In-depth details about the data is presented in the [dedicated page](intro_data.qmd).
+In-depth details about the data is presented in the [dedicated page](subject/1-intro_data.qmd).
 
 # General presentation of the data
 

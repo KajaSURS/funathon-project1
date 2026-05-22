@@ -681,4 +681,4 @@ Congrats 🎉! In this section, you have successfully :
 - plotted the target variable and defined that it needs to be transformed,
 - and finally, defined the pre-processing steps of our machine learning with scikit-learn's pipeline.
 
-You can now have a look at how to train a [random forest model](2-RF_model.qmd) and a [gradient boosting model](2-GB_model.qmd).
+You can now have a look at how to train a [random forest model](3-RF_model.qmd) and a [gradient boosting model](3-GB_model.qmd).
