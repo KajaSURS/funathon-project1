@@ -82,7 +82,7 @@ log_to_mlflow(
 # %%
 # Saving GB model to S3
 logger.info("Storing latest GB model from MLFLow to S3")
-store_model_mlflow_s3("models:/GB@latest", "gb_model_final.joblib")
+store_model_mlflow_s3("models:/GB@latest", "gb_model_final_solution.joblib")
 
 # %%
 logger.info("Setting training data sets")
@@ -130,5 +130,5 @@ log_to_mlflow(
 # %%
 # Saving RF model to S3
 logger.info("Storing latest RF model from MLFLow to S3")
-store_model_mlflow_s3("models:/RF@latest", "rf_model_final.joblib")
+store_model_mlflow_s3("models:/RF@latest", "rf_model_final_solution.joblib")
 # %%
