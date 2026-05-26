@@ -1,4 +1,5 @@
-# %%
+# %% 
+# Run it from bash with uv run solution/admin/save_models.py intermediate_solutions/3_RF.py rf_model_final rf_model.joblib
 import sys
 import os
 
@@ -6,19 +7,32 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import shutil
-import subprocess 
+import subprocess
+import argparse
 
 from utils import upload_file_s3
 
-input_script = "intermediate_solutions/3_RF.py"
-model_name = "rf_model_final"
-s3_name = "rf_model_test.joblib"
+# Argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("input_script", help="Path to the input script")
+parser.add_argument("model_name", help="Name of the model variable")
+parser.add_argument("s3_name", help="S3 destination filename")
+args = parser.parse_args()
 
-# Step 1: Copy 3_RF.py to temp.py
+input_script = args.input_script
+model_name = args.model_name
+s3_name = args.s3_name
+
+# Debug
+# input_script = "intermediate_solutions/3_RF.py"
+# model_name = "rf_model_final"
+# s3_name = "rf_model_test.joblib"
+
+# Step 1: Copy script to temp.py
 os.makedirs("temp", exist_ok=True)
 shutil.copy(input_script, "temp/temp.py")
 
-# Step 2: Add lines to temp script to dump model 
+# Step 2: Add lines to temp script to dump model
 with open("temp/temp.py", "a") as f:
     f.write("\n\n# Save model\n")
     f.write("import joblib\n")
