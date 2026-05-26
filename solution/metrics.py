@@ -94,7 +94,7 @@ def calculate_importance(X_test, y_test, RANDOM_STATE, model, SCORING):
     )
 
     importances = (
-        pd.Series(perm.importances_mean, index=X_test.columns)
+        pd.Series(perm.importances_mean, index=X_test_sample.columns)
         .sort_values(ascending=False)
     )
     return importances
