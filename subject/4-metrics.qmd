@@ -225,7 +225,7 @@ Save the RMSE for both models as `rmse_rf` and `rmse_gb`.
 
 Import `root_mean_squared_error`, `mean_absolute_error` and `r2_score` from `sklearn.metrics`. You can see the documentation of `sklearn.metrics` [here](https://scikit-learn.org/stable/api/sklearn.metrics.html).
 
-You can use the function `print_metrics` made in the last section on *GB model*.
+You can use the function `print_metrics` made in the *GB model* section.
 
 :::
 
