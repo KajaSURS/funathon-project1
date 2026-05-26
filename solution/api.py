@@ -44,7 +44,7 @@ def predict(prop_features: dict):
 
     # Turning prop_type to Categorical data
     prop_features_df["prop_type"] = pd.Categorical(
-        prop_features_df["prop_type"],
+        prop_features_df["prop_type"].astype(str),
         categories=["1", "2"],
         ordered=False
     ).rename_categories({"1": "House", "2": "Flat"})
