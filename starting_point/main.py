@@ -12,6 +12,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 
+from sklearn.pipeline import make_pipeline
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, FunctionTransformer
+from sklearn.compose import ColumnTransformer, TransformedTargetRegressor
+
 RANDOM_STATE = 202605
 
 # Create a non-persistent connection (the database exists only while the connection is alive and disappears when it is closed)
@@ -158,6 +164,36 @@ X_train, X_test, y_train, y_test = train_test_split(
     test_size=0.2,
     random_state=RANDOM_STATE
 )
+
+
+rf_pipeline = Pipeline([
+    ("preprocessor", preprocessor),
+    ("random forests", RandomForestRegressor(**rf_params))
+])
+
+def date_to_days(X: pd.Series, ref_date: pd.Timestamp):
+    # converts a date to a difference to ref_date :
+    diff_dt = pd.to_datetime(X) - ref_date
+    # Extract days part from datetime object
+    diff_dt = diff_dt.dt.days
+    # Transform it from a Pandas series to a Numpy nd array, used by scikit learn for input
+    diff_dt = diff_dt.to_numpy().reshape(-1, 1)
+
+    return diff_dt
+
+date_transformer = FunctionTransformer(
+    date_to_days,
+    kw_args={"ref_date": pd.Timestamp('2010-01-01 00:00')}
+    )
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ("cat", OneHotEncoder(handle_unknown="ignore"), ["prop_type", "prop_year_harm_10"]),  # one-hot encoder on feature
+        ("dat", date_transformer, "trans_date") # feature time since 01-01-2010
+    ],
+    remainder="passthrough"  # to keep features not transformed
+)
+
 
 
 
