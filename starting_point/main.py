@@ -1044,5 +1044,11 @@ with mlflow.start_run(run_name="run_rf"):
 
     print(f"Run ID : {mlflow.active_run().info.run_id}")
 
+#API (DEPLOYING THE MODEL)
+
+#port 8000 blocked by proxy
+
+
+
 
 # %%
