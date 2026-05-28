@@ -807,4 +807,242 @@ for _, row in results.iterrows():
         f"i.e. a total of about {row['total_price']:,.0f} €."
     )
 
+#Model Evaluation, Metrics
+
+# best RF
+y_pred_RF = rf_model_final.predict(X_test)
+rf_residuals = y_test - y_pred_RF
+
+# best GB
+y_pred_GB = gb_model_final.predict(X_test)
+gb_residuals = y_test - y_pred_GB
+
+def print_metrics(model, split, X, y):
+    """
+    Print metrics for trained model
+    """
+    y_pred = model.predict(X)
+    rmse = root_mean_squared_error(y, y_pred)
+    mae = mean_absolute_error(y, y_pred)
+    r2  = r2_score(y, y_pred)
+    print(f"{split} — RMSE: {rmse:.2f}  |  MAE: {mae:.2f}  |  R²: {r2:.4f}")
+
+models = [("RF", rf_model_final), ("GB", gb_model_final)]
+
+for name, model in models:
+    print_metrics(model, name, X_test, y_test)
+
+rmse_rf = root_mean_squared_error(y_test, y_pred_RF)
+rmse_gb = root_mean_squared_error(y_test, y_pred_GB)
+
+from sklearn.metrics import mean_absolute_percentage_error
+
+mape_pct_rf = mean_absolute_percentage_error(y_test, y_pred_RF) * 100
+mape_pct_gb = mean_absolute_percentage_error(y_test, y_pred_GB) * 100
+print(f"MAPE RF: {mape_pct_rf:.2f} %")
+print(f"MAPE GB: {mape_pct_gb:.2f} %")
+
+def residuals_distribution(residuals: pd.Series, rmse: float, ax=None, label=None, color=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    ax.hist(residuals, bins=100, edgecolor="none", alpha=0.5, label=label or f"RMSE = {rmse:.3f}", color=color)
+    ax.axvline(0, color="red", linestyle="--")
+    ax.set_xlabel("Residual")
+    ax.set_ylabel("Frequency")
+    ax.set_title("Residuals distribution")
+    ax.legend()
+    return ax
+
+fig, ax = plt.subplots()
+residuals_distribution(rf_residuals, rmse_rf, ax=ax, label=f"RF (RMSE={rmse_rf:.3f})", color="steelblue")
+residuals_distribution(gb_residuals, rmse_gb, ax=ax, label=f"GB (RMSE={rmse_gb:.3f})", color="darkorange")
+plt.show()
+
+
+def QQplot(y_test: pd.Series, y_pred: pd.Series, ax=None, label=None, color=None):
+    """
+    Actual quantiles vs predicted quantiles
+    """
+    quantiles = np.linspace(0, 100, 1000)
+    q_real = np.percentile(y_test, quantiles)
+    q_predict = np.percentile(y_pred, quantiles)
+
+    if ax is None:
+        fig, ax = plt.subplots()
+    ax.scatter(q_real, q_predict, alpha=0.5, s=5, label=label or "Quantiles", color=color)
+    ax.plot(
+        [q_real[0], q_real[-1]],
+        [q_real[0], q_real[-1]],
+        "r--", linewidth=1.5
+    )
+    ax.set_xlabel("Actual quantiles")
+    ax.set_ylabel("Predicted quantiles")
+    ax.set_title("QQ-plot: actual vs predicted")
+    ax.legend()
+    return ax
+
+fig, ax = plt.subplots()
+QQplot(y_test, y_pred_RF, ax=ax, label="Random Forest", color="steelblue")
+QQplot(y_test, y_pred_GB, ax=ax, label="Gradient Boosting", color="darkorange")
+plt.show()
+
+def target_distribution(y: pd.Series):
+    y_sorted = np.sort(y)
+    axe = np.linspace(0, 100, len(y_sorted))   # axe with percentiles
+
+    fig = plt.figure()
+    plt.plot(axe, y_sorted)
+    plt.xlabel("Percentile")
+    plt.ylabel("Value (EUR)")
+    plt.title("Distribution")
+    return fig
+
+fig_actual = target_distribution(y_test)
+plt.title("Target distribution — actual values")
+plt.show()
+
+fig_pred = target_distribution(y_pred_RF)
+plt.title("Target distribution — predicted values with RF model")
+plt.show()
+
+fig_pred = target_distribution(y_pred_GB)
+plt.title("Target distribution — predicted values with GB model")
+plt.show()
+
+from sklearn.inspection import permutation_importance
+
+def calculate_importance(X_test, y_test, RANDOM_STATE, final_rf, SCORING):
+    X_test_sample = X_test.sample(n=min(100_000, len(X_test)), random_state=RANDOM_STATE)
+    y_test_sample = y_test.loc[X_test_sample.index]
+
+    perm = permutation_importance(
+        final_rf, X_test_sample, y_test_sample,
+        n_repeats=5,
+        scoring=SCORING,
+        n_jobs=-1,
+        random_state=RANDOM_STATE
+    )
+
+    importances = (
+        pd.Series(perm.importances_mean, index=X_test_sample.columns)
+        .sort_values(ascending=False)
+    )
+    return importances
+
+def importance_plot(importances):
+    """
+    Permutation importance plot
+    """
+    fig, ax = plt.subplots(figsize=(8, 6))
+    importances.head(20).plot.barh(ax=ax)
+    ax.invert_yaxis()
+    ax.set_title("Permutation importance (top 20)")
+    ax.set_xlabel("Mean increase in RMSE")
+    plt.tight_layout()
+    return fig
+
+score = "r2"
+
+importances = calculate_importance(X_test, y_test, RANDOM_STATE, rf_model_final, score)
+fig_importance = importance_plot(importances)
+plt.show()
+
+
+#MODEL LOGGING
+
+def residuals_distribution(residuals, r2):
+    fig, ax  = plt.subplots()
+
+    ax.hist(residuals, bins=50)
+    ax.set_title(f"Residuals distribution, R2={r2:.3f}")
+
+    return fig
+
+def QQplot(y_true, y_pred):
+    residuals = y_true - y_pred
+
+    fig, ax = plt.subplots()
+    stats.probplot(residuals, dist="norm", plot=ax)
+    ax.set_title("Q-Q Plot of residuals")
+
+    return fig
+
+import mlflow
+import os
+import scipy.stats as stats
+
+mlflow_server = os.getenv("MLFLOW_TRACKING_URI") # your environment feature for accessing to MLFlow server
+mlflow.set_tracking_uri(mlflow_server)
+mlflow.set_experiment("run_rf")
+
+with mlflow.start_run(run_name="run_rf"):
+    # all logging calls go here
+    mlflow.set_tags({
+        "model_type": "RandomForestRegressor",
+        "task": "regression",
+        "data_path": "https://minio.lab.sspcloud.fr/...",
+        "target_col": y.name,
+        "framework": "scikit-learn"
+    })
+    mlflow.log_params({
+        "test_size": 0.2,
+        "max_depth": 5,
+        "min_samples_split": 2,
+        "random_state": RANDOM_STATE,
+        "n_train": len(X_train),
+        "n_test": len(X_test),
+        "n_features": X.shape[1],
+        "target_mean": round(float(y.mean()), 4),
+        "target_std": round(float(y.std()), 4),
+        "oob_score": True,
+        "n_jobs": -1
+    })
+    
+    mlflow.log_figure(oob_error_ntrees, "convergence_ntrees_oob_error.png")
+    
+    mlflow.log_params(grid_search.best_params_)
+    
+    from sklearn.metrics import root_mean_squared_error, r2_score, mean_absolute_error
+
+    y_pred = rf_model_final.predict(X_test)
+    residuals = y_test - y_pred
+
+    metrics = {
+        "neg_root_mean_squared_error": root_mean_squared_error(y_test, y_pred),
+        "neg_mean_absolute_error": mean_absolute_error(y_test, y_pred),
+        "r2": r2_score(y_test, y_pred),
+    }
+
+    mlflow.log_metrics(metrics)
+
+    mlflow.log_figure(
+        residuals_distribution(residuals, metrics["r2"]),
+        "residuals_distrib.png"
+    )
+    mlflow.log_figure(QQplot(y_test, y_pred), "qqplot.png")
+    mlflow.log_figure(target_distribution(y_test), "y_test_distrib.png")
+    mlflow.log_figure(target_distribution(y_pred), "y_pred_distrib.png")
+    mlflow.log_figure(
+        importance_plot(
+            calculate_importance(X_test, y_test, RANDOM_STATE, rf_model_final, "r2")
+        ),
+        "importance.png"
+    )
+
+    import mlflow.sklearn
+    from mlflow.models.signature import infer_signature
+
+    signature = infer_signature(X_train, rf_model_final.predict(X_train))
+
+    mlflow.sklearn.log_model(
+        sk_model=rf_model_final,
+        name="RF",
+        signature=signature,
+        input_example=X_train.head(5),
+        registered_model_name="rf-run",
+    )
+
+    print(f"Run ID : {mlflow.active_run().info.run_id}")
+
+
 # %%
